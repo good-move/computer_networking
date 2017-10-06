@@ -1,7 +1,7 @@
-package ru.nsu.ccfit.boltava.serializer;
+package ru.nsu.ccfit.boltava.model.serializer;
 
 
-import ru.nsu.ccfit.boltava.message.Message;
+import ru.nsu.ccfit.boltava.model.message.Message;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -15,7 +15,7 @@ import java.io.StringWriter;
  */
 public class XmlMessageSerializer implements IMessageSerializer<String> {
 
-    private static final String CONTEXT = "ru.nsu.ccfit.boltava.message";
+    private static final String CONTEXT = "ru.ru.nsu.ccfit.boltava.ru.nsu.ccfit.boltava.model.message";
     private final Marshaller mMarshaller;
     private final Unmarshaller mUnmarshaller;
 

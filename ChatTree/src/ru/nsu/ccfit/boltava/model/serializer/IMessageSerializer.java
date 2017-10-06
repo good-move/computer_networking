@@ -1,6 +1,6 @@
-package ru.nsu.ccfit.boltava.serializer;
+package ru.nsu.ccfit.boltava.model.serializer;
 
-import ru.nsu.ccfit.boltava.message.Message;
+import ru.nsu.ccfit.boltava.model.message.Message;
 
 import javax.xml.bind.JAXBException;
 

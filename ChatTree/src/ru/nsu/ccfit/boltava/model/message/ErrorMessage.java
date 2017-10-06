@@ -1,6 +1,6 @@
-package ru.nsu.ccfit.boltava.message;
+package ru.nsu.ccfit.boltava.model.message;
 
-import ru.nsu.ccfit.boltava.IMessageHandler;
+import ru.nsu.ccfit.boltava.model.IMessageHandler;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;

@@ -1,16 +1,16 @@
-package ru.nsu.ccfit.boltava;
+package ru.nsu.ccfit.boltava.model;
 
-import ru.nsu.ccfit.boltava.message.*;
+import ru.nsu.ccfit.boltava.model.message.*;
 
 public interface IMessageHandler {
 
     /**
-     * Acknowledge message handling depends on the Node's state nad message type
-     * it refers to. Incoming ACK message must always have a matching pair sent
-     * message, identified by UUID.
+     * Acknowledge serializer handling depends on the Node's state nad serializer type
+     * it refers to. Incoming ACK serializer must always have a matching pair sent
+     * serializer, identified by UUID.
      *
      * - State == STARTING
-     * ACK message is only expected to confirm a previously sent JOIN message.
+     * ACK serializer is only expected to confirm a previously sent JOIN serializer.
      * All other messages are ignored.
      *
      * - State == RUNNING
@@ -26,7 +26,7 @@ public interface IMessageHandler {
      * ---- IN DEVELOPMENT ----
      *
      * - State == TERMINATED
-     * All messages are ignored and are actually never expected to reach a message
+     * All messages are ignored and are actually never expected to reach a serializer
      * handler
      *
      * @param message Message that confirms a process has been finished
@@ -62,12 +62,12 @@ public interface IMessageHandler {
     void handle(RootMessage message);
 
     /**
-     * If text message is received and current node is not in Starting or
-     * Terminated state, then the message must be registered by the node, its text
+     * If text serializer is received and current node is not in Starting or
+     * Terminated state, then the serializer must be registered by the node, its text
      * should be shown to the user, and ACK response should be sent back to the
      * sender
      *
-     * @param message Text message which users send via chat
+     * @param message Text serializer which users send via chat
      */
     void handle(TextMessage message);
 

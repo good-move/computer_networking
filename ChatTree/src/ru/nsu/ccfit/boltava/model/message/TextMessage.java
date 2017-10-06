@@ -1,17 +1,19 @@
-package ru.nsu.ccfit.boltava.message;
+package ru.nsu.ccfit.boltava.model.message;
 
-import ru.nsu.ccfit.boltava.IMessageHandler;
+import ru.nsu.ccfit.boltava.model.IMessageHandler;
 
 import javax.xml.bind.annotation.*;
 import java.util.UUID;
 
 @XmlRootElement
-@XmlAccessorType(XmlAccessType.FIELD)
+@XmlAccessorType(XmlAccessType.NONE)
 public class TextMessage extends Message {
 
-    private String mText;
+    @XmlElement(name = "text")
+    private final String mText;
 
-    private String mSenderName;
+    @XmlElement(name = "sender")
+    private final String mSenderName;
 
     public TextMessage() {
         this("","");

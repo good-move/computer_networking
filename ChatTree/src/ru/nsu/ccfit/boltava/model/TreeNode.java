@@ -1,16 +1,15 @@
-package ru.nsu.ccfit.boltava;
+package ru.nsu.ccfit.boltava.model;
 
-import ru.nsu.ccfit.boltava.message.JoinMessage;
-import ru.nsu.ccfit.boltava.message.Message;
-import ru.nsu.ccfit.boltava.message.TextMessage;
-import ru.nsu.ccfit.boltava.net.DatagramMessageSender;
-import ru.nsu.ccfit.boltava.serializer.XmlMessageSerializer;
+import ru.nsu.ccfit.boltava.model.message.JoinMessage;
+import ru.nsu.ccfit.boltava.model.message.Message;
+import ru.nsu.ccfit.boltava.model.message.TextMessage;
+import ru.nsu.ccfit.boltava.model.net.DatagramMessageSender;
+import ru.nsu.ccfit.boltava.model.serializer.XmlMessageSerializer;
 
 import javax.xml.bind.JAXBException;
 import java.io.*;
 import java.net.*;
 import java.nio.charset.Charset;
-import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.*;
 
@@ -20,7 +19,7 @@ import java.util.concurrent.*;
  *
  * Node has three states:
  *  - Joining (Node tries to connect to the parent, if one's been supplied,
- *  and waits for ACK message, ignoring all other messages.)
+ *  and waits for ACK serializer, ignoring all other messages.)
  *  - Running (Listens to all messages and enables console input to enter text messages,
  *  which will be sent to all other nodes.)
  *  - Shutting (Node wants to shut down and is in the process of tree
@@ -275,9 +274,9 @@ public class TreeNode {
      * register it as "received" and delegate it to an IMessageHandler
      * to process.
      *
-     * NOTE: before passing the message over to an IMessageHandler, listener
+     * NOTE: before passing the serializer over to an IMessageHandler, listener
      * first calls isPacketLost() to decide whether the current packet is
-     * considered lost or not. If the former is true, the message never gets
+     * considered lost or not. If the former is true, the serializer never gets
      * registered nor processed.
      */
     private class MessageListener implements Runnable {
