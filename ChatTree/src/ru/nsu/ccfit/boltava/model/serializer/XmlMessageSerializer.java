@@ -15,7 +15,7 @@ import java.io.StringWriter;
  */
 public class XmlMessageSerializer implements IMessageSerializer<String> {
 
-    private static final String CONTEXT = "ru.ru.nsu.ccfit.boltava.ru.nsu.ccfit.boltava.model.message";
+    private static final String CONTEXT = "ru.nsu.ccfit.boltava.model.message";
     private final Marshaller mMarshaller;
     private final Unmarshaller mUnmarshaller;
 
