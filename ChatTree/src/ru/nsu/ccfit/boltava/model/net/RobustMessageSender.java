@@ -20,7 +20,7 @@ public class RobustMessageSender {
     private final static int WAIT_INTERVAL = 250;
 
     private final DatagramMessageSender sender;
-    private volatile boolean keepRunning = true;
+    private volatile boolean stopped = false;
 
     public RobustMessageSender(DatagramSocket socket, IMessageSerializer<String> serializer)
             throws IOException, JAXBException {
@@ -36,7 +36,7 @@ public class RobustMessageSender {
      * @throws TimeoutException
      */
     public void send(Message message, InetSocketAddress receiver)
-            throws JAXBException, IOException, TimeoutException, InterruptedException {
+            throws JAXBException, IOException, TimeoutException, InterruptedException, SenderStoppedException {
         this.send(message, receiver, DEFAULT_TIMEOUT);
     }
 
@@ -54,16 +54,32 @@ public class RobustMessageSender {
      * @throws TimeoutException
      */
     public void send(Message message, InetSocketAddress receiver, int timeout)
-            throws JAXBException, IOException, TimeoutException, InterruptedException {
+            throws JAXBException, IOException, TimeoutException, InterruptedException, SenderStoppedException {
+        stopped = false;
         long startTime = System.currentTimeMillis();
-        while (keepRunning && System.currentTimeMillis() - startTime < timeout) {
+        while (!stopped && System.currentTimeMillis() - startTime < timeout) {
             sender.send(message, receiver);
             wait(WAIT_INTERVAL);
         }
-        throw new TimeoutException("Delivery timeout hit");
+        if (stopped) {
+            throw new SenderStoppedException("Sender interrupted");
+        } else {
+            throw new TimeoutException("Delivery timeout hit");
+        }
     }
 
     public void cancel() {
-        keepRunning = false;
+        stopped = false;
+    }
+
+
+    public static class SenderStoppedException extends Exception {
+
+        public SenderStoppedException() {}
+
+        public SenderStoppedException(String msg) {
+            super(msg);
+        }
+
     }
 }
