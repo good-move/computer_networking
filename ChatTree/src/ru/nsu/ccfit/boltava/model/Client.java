@@ -39,7 +39,7 @@ public final class Client implements IMessageListener {
         Neighbor parent = (parentAddress == null) ? null : new Neighbor(this.socket, parentAddress);
         this.node = new Node(nodeName, parent);
         this.packetLossFactor = packetLossFactor;
-        messageListener = new Thread(new Client.MessageListener(socket, new MessageHandler(this)));
+        messageListener = new Thread(new Client.MessageListener(socket, new MessageHandler(null)));
         messageListener.start();
         if (parent != null) {
             state = State.Joining;
@@ -60,14 +60,21 @@ public final class Client implements IMessageListener {
         renderers.remove(renderer);
     }
 
-    private void notifyRenderers(TextMessage message) {
+    public synchronized void showMessage(TextMessage message) {
         renderers.forEach(r -> r.render(message));
     }
 
-    public Node getNode() {
+    public synchronized Node getNode() {
         return node;
     }
 
+    public synchronized void setState(State state) {
+        this.state = state;
+    }
+
+    public synchronized State getState() {
+        return state;
+    }
 
     // ***************************** Message operation routines *****************************
 
@@ -80,7 +87,7 @@ public final class Client implements IMessageListener {
     public void broadcastMessage(Message message) throws InterruptedException {
         for (Neighbor neighbor : node.getNeighbors()) {
             if (!neighbor.getAddress().equals(message.getSender())) {
-                neighbor.feedMessage(message);
+                neighbor.sendMessage(message);
             }
         }
     }
@@ -96,7 +103,17 @@ public final class Client implements IMessageListener {
     public void sendTo(Message message, InetSocketAddress receiver) throws InterruptedException {
         Neighbor neighbor = node.getChild(receiver);
         if (neighbor != null) {
-            neighbor.feedMessage(message);
+            neighbor.sendMessage(message);
+        } else {
+
+        }
+    }
+
+    public void sendTo(Message message, InetSocketAddress receiver, Runnable onSuccess, Runnable onError)
+            throws InterruptedException {
+        Neighbor neighbor = node.getChild(receiver);
+        if (neighbor != null) {
+            neighbor.sendMessage(message, onSuccess, onError);
         } else {
 
         }
@@ -106,7 +123,7 @@ public final class Client implements IMessageListener {
     public void onTextMessageEntered(String message) {
         try {
             if (this.state == State.Running) {
-                broadcastMessage(new TextMessage(message, node.getNodeName()));
+                broadcastMessage(new TextMessage(message, node.getName()));
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -116,9 +133,22 @@ public final class Client implements IMessageListener {
 
 //    ***************************** Internal state manipulation routines *****************************
 
+    /**
+     * Tries to send JOIN message to parent to establish logical connection
+     */
     private void joinParent() {
         try {
-            node.getParent().feedMessage(new JoinMessage(node.getNodeName()));
+            node.getParent()
+                .sendMessage(
+                        new JoinMessage(node.getName()),
+                        () -> this.state = State.Running,
+                        () -> {
+                            this.state = State.Terminated;
+                            System.out.println("Failed to connect to parent");
+                            messageListener.interrupt();
+                            node.getParent().detach();
+                        }
+                );
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -147,14 +177,23 @@ public final class Client implements IMessageListener {
 
         @Override
         public void run() {
-            try {
-                DatagramMessageReceiver.MessageWrapper wrapper = receiver.receive();
-                Message message = wrapper.getMessage();
-                message.setSender(new InetSocketAddress(wrapper.getAddress(), wrapper.getPort()));
-                message.handle(handler);
-            } catch (IOException | JAXBException e) {
-                e.printStackTrace();
+            while (!Thread.interrupted()) {
+                try {
+                    DatagramMessageReceiver.MessageWrapper wrapper = receiver.receive();
+                    Message message = wrapper.getMessage();
+                    if (!isPacketLost()) {
+                        message.setSender(new InetSocketAddress(wrapper.getAddress(), wrapper.getPort()));
+                        message.handle(handler);
+                    }
+                } catch (IOException | JAXBException e) {
+                    e.printStackTrace();
+                }
             }
+        }
+
+        private boolean isPacketLost() {
+            return false;
+//            return new Random().nextInt() % 100 <= mPacketLossFactor;
         }
 
     }
@@ -178,7 +217,7 @@ public final class Client implements IMessageListener {
             this.parent = parent;
         }
 
-        public String getNodeName() {
+        public String getName() {
             return nodeName;
         }
 
@@ -198,7 +237,10 @@ public final class Client implements IMessageListener {
          * @param address - child to remove
          */
         public void removeChild(InetSocketAddress address) {
-            children.remove(address);
+            Neighbor neighbor = children.remove(address);
+            if (neighbor != null) {
+                neighbor.detach();
+            }
         }
 
         public Neighbor getChild(InetSocketAddress address) {
