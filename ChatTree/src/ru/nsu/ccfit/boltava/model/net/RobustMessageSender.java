@@ -18,7 +18,9 @@ public class RobustMessageSender {
 
     private final static int DEFAULT_TIMEOUT = 10 * 1000;
     private final static int WAIT_INTERVAL = 250;
+
     private final DatagramMessageSender sender;
+    private volatile boolean keepRunning = true;
 
     public RobustMessageSender(DatagramSocket socket, IMessageSerializer<String> serializer)
             throws IOException, JAXBException {
@@ -54,11 +56,14 @@ public class RobustMessageSender {
     public void send(Message message, InetSocketAddress receiver, int timeout)
             throws JAXBException, IOException, TimeoutException, InterruptedException {
         long startTime = System.currentTimeMillis();
-        while (System.currentTimeMillis() - startTime < timeout) {
+        while (keepRunning && System.currentTimeMillis() - startTime < timeout) {
             sender.send(message, receiver);
             wait(WAIT_INTERVAL);
         }
         throw new TimeoutException("Delivery timeout hit");
     }
 
+    public void cancel() {
+        keepRunning = false;
+    }
 }
