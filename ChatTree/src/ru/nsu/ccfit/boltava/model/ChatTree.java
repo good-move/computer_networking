@@ -1,5 +1,7 @@
 package ru.nsu.ccfit.boltava.model;
 
+import ru.nsu.ccfit.boltava.view.ConsoleView;
+
 import javax.xml.bind.JAXBException;
 import java.io.*;
 import java.net.*;
@@ -33,13 +35,14 @@ public class ChatTree {
             Integer portNumber = Integer.valueOf(args[1]);
             if (portNumber <= 0) throw new NumberFormatException("Port number must be a positive integer");
             Integer packetLossPercentage = Integer.valueOf(args[2]);
+            Client client = null;
             if (args.length == TOTAL_ARGUMENTS_COUNT) {
                 String parentIpString = args[3];
                 Integer parentPort = Integer.valueOf(args[4]);
                 InetSocketAddress parentAddress = new InetSocketAddress(
                         InetAddress.getByName(parentIpString), parentPort
                 );
-                new TreeNode(
+                client = new Client(
                         nodeName,
                         portNumber,
                         packetLossPercentage,
@@ -47,8 +50,14 @@ public class ChatTree {
                 );
 
             } else {
-                new TreeNode(nodeName, portNumber, packetLossPercentage);
+                client = new Client(nodeName, portNumber, packetLossPercentage);
             }
+            ConsoleView view = new ConsoleView();
+            view.addMessageListener(client);
+            client.addMessageRenderer(view);
+
+            new Thread(view).start();
+
         } catch (NumberFormatException e) {
             System.err.println("Failed to parse port. " + e.getMessage());
         } catch (JAXBException | IOException e) {
