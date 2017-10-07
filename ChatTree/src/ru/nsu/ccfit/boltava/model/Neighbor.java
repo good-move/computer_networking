@@ -22,7 +22,7 @@ public class Neighbor {
     private static final int QUEUE_SIZE = 500;
 
     private ExecutorService threadPool = Executors.newFixedThreadPool(MAX_THREADS_COUNT);
-    private LinkedBlockingQueue<Message> msgDeque = new LinkedBlockingQueue<>(QUEUE_SIZE);
+    private LinkedBlockingQueue<ExecutionPack> queue = new LinkedBlockingQueue<>(QUEUE_SIZE);
 
     private final InetSocketAddress address;
     private final DatagramSocket socket;
@@ -48,8 +48,12 @@ public class Neighbor {
      *
      * @param message - message to send to the neighbor
      */
-    public void feedMessage(Message message) throws InterruptedException {
-        msgDeque.put(message);
+    public void sendMessage(Message message) throws InterruptedException {
+        feedQueue(message, null, null);
+    }
+
+    public void sendMessage(Message message, Runnable onSuccess, Runnable onError) throws InterruptedException {
+        feedQueue(message, onSuccess, onError);
     }
 
     public InetSocketAddress getAddress() {
@@ -60,6 +64,14 @@ public class Neighbor {
         if (!threadPool.isShutdown()) {
             threadPool.shutdown();
         }
+    }
+
+    private void feedQueue(Message message, Runnable onSuccess, Runnable onError) throws InterruptedException {
+        if (message == null) {
+            throw new IllegalArgumentException("Message can't be null");
+        }
+
+        queue.put(new ExecutionPack(message, onSuccess, onError));
     }
 
     private final class MessageSender implements Runnable, IEventListener<MessageReceivedEvent> {
@@ -73,9 +85,9 @@ public class Neighbor {
         @Override
         public void run() {
             while (!Thread.interrupted()) {
-                Message message;
+                ExecutionPack pack;
                 try {
-                    message = msgDeque.take();
+                    pack = queue.take();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                     break;
@@ -83,9 +95,20 @@ public class Neighbor {
 
                 try {
                     // subscribe to message event
-                    sender.send(message, address);
-                } catch (JAXBException | IOException | TimeoutException | InterruptedException e) {
+                    sender.send(pack.getMessage(), address);
+                } catch (JAXBException | IOException | InterruptedException e) {
                     e.printStackTrace();
+                    if (pack.getOnError() != null) {
+                        pack.getOnError().run();
+                    }
+                } catch (RobustMessageSender.SenderStoppedException e) {
+                    if (pack.getOnSuccess() != null) {
+                        pack.getOnSuccess().run();
+                    }
+                } catch (TimeoutException e) {
+                    if (pack.getOnError() != null) {
+                        pack.getOnError().run();
+                    }
                 } finally {
                     // unsubscribe from message event
                 }
@@ -98,6 +121,31 @@ public class Neighbor {
             sender.cancel();
         }
 
+    }
+
+    private final class ExecutionPack {
+
+        private final Message message;
+        private final Runnable onSuccess;
+        private final Runnable onError;
+
+        ExecutionPack(Message message, Runnable onSuccess, Runnable onError) {
+            this.message = message;
+            this.onSuccess = onSuccess;
+            this.onError = onError;
+        }
+
+        public Message getMessage() {
+            return message;
+        }
+
+        public Runnable getOnSuccess() {
+            return onSuccess;
+        }
+
+        public Runnable getOnError() {
+            return onError;
+        }
     }
 
 }
