@@ -16,7 +16,7 @@ import java.util.concurrent.TimeoutException;
  */
 public class RobustMessageSender {
 
-    private final static int DEFAULT_TIMEOUT = 10 * 1000;
+    private final static int DEFAULT_TIMEOUT = 4 * 1000;
     private final static int WAIT_INTERVAL = 250;
 
     private final DatagramMessageSender sender;
