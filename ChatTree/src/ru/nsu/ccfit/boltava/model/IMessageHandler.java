@@ -5,7 +5,7 @@ import ru.nsu.ccfit.boltava.model.message.*;
 public interface IMessageHandler {
 
     /**
-     * Acknowledge serializer handling depends on the Node's state nad serializer type
+     * Acknowledge serializer handling depends on the Client's state nad serializer type
      * it refers to. Incoming ACK serializer must always have a matching pair sent
      * serializer, identified by UUID.
      *
@@ -62,7 +62,7 @@ public interface IMessageHandler {
     void handle(RootMessage message);
 
     /**
-     * If text serializer is received and current node is not in Starting or
+     * If text serializer is received and current node is not in Joining or
      * Terminated state, then the serializer must be registered by the node, its text
      * should be shown to the user, and ACK response should be sent back to the
      * sender

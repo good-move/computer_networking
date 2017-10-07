@@ -12,7 +12,7 @@ public class ChatTree {
     private static final String DEFAULT_MESSAGE_ENCODING = "utf-8";
     /**
      * @param args:
-     *            1. Node name
+     *            1. Client name
      *            2. Port number
      *            3. Percentage of packages lost
      *            4. Parent ip address (optional)

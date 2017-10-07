@@ -13,12 +13,12 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.*;
 
 /**
- * Neighbor represents a Node's adjacent node.
+ * Neighbor represents a Client's adjacent node.
  * The class provides message sending interface.
  */
 public class Neighbor {
 
-    private static final int MAX_THREADS_COUNT = 3;
+    private static final int MAX_THREADS_COUNT = 1;
     private static final int QUEUE_SIZE = 500;
 
     private ExecutorService threadPool = Executors.newFixedThreadPool(MAX_THREADS_COUNT);
@@ -50,6 +50,10 @@ public class Neighbor {
      */
     public void feedMessage(Message message) throws InterruptedException {
         msgDeque.put(message);
+    }
+
+    public InetSocketAddress getAddress() {
+        return address;
     }
 
     public void detach() {

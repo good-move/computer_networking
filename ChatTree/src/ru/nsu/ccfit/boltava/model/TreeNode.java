@@ -15,22 +15,22 @@ import java.util.concurrent.*;
 
 
 /**
- * Class which implements the Chat Tree Node abstraction.
+ * Class which implements the Chat Tree Client abstraction.
  *
- * Node has three states:
- *  - Joining (Node tries to connect to the parent, if one's been supplied,
+ * Client has three states:
+ *  - Joining (Client tries to connect to the parent, if one's been supplied,
  *  and waits for ACK serializer, ignoring all other messages.)
  *  - Running (Listens to all messages and enables console input to enter text messages,
  *  which will be sent to all other nodes.)
- *  - Shutting (Node wants to shut down and is in the process of tree
- *  restructuring: Node's neighbors have to be rejoined before this Node can shut down completely.
+ *  - Shutting (Client wants to shut down and is in the process of tree
+ *  restructuring: Client's neighbors have to be rejoined before this Client can shut down completely.
  *  All chat functions are preserved.)
  *  - Terminated (Enters this state only after Shutting state. If this state
- *  is active, tree restructuring has completed successfully and Node can shut down freely.
+ *  is active, tree restructuring has completed successfully and Client can shut down freely.
  *  All chat functions are disabled.)
  *
  * It listens to all incoming messages and passes them to MessageHandler,
- * which can modify Node's state through public setState() method.
+ * which can modify Client's state through public setState() method.
  *
  *
  *
