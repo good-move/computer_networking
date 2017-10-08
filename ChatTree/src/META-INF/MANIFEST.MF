@@ -1,3 +1,3 @@
 Manifest-Version: 1.0
-Main-Class: ru.ru.nsu.ccfit.boltava.ru.nsu.ccfit.boltava.model.ChatTree
+Main-Class: ru.nsu.ccfit.boltava.model.ChatTree
 
