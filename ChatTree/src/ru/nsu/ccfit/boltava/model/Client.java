@@ -31,21 +31,21 @@ public final class Client implements IMessageListener {
     private Thread messageListener;
 
 
-    public Client(String nodeName, int port, int packetLossFactor) throws IOException, JAXBException {
+    Client(String nodeName, int port, int packetLossFactor) throws IOException, JAXBException {
         this(nodeName, port, packetLossFactor, null);
     }
 
-    public Client(String nodeName, int port, int packetLossFactor, InetSocketAddress parentAddress)
+    Client(String nodeName, int port, int packetLossFactor, InetSocketAddress parentAddress)
             throws IOException, JAXBException {
         System.out.println("Initializing node...");
 
         this.socket = new DatagramSocket(port);
         Neighbor parent = (parentAddress == null) ? null : new Neighbor(this.socket, parentAddress);
-        this.node = new Node(nodeName, parent);
+        this.node =  parentAddress == null ? new Node(nodeName) : new Node(nodeName, parent);
         this.packetLossFactor = packetLossFactor;
         messageListener = new Thread(new Client.MessageListener(socket, new MessageHandler(null)));
         messageListener.start();
-        if (parent != null) {
+        if (!isRoot()) {
             state = State.Joining;
             joinParent();
         } else {
@@ -56,7 +56,7 @@ public final class Client implements IMessageListener {
 
 //    ***************************** Public methods *****************************
 
-    public synchronized void addMessageRenderer(IMessageRenderer renderer) {
+    synchronized void addMessageRenderer(IMessageRenderer renderer) {
         renderers.add(renderer);
     }
 
@@ -64,23 +64,23 @@ public final class Client implements IMessageListener {
         renderers.remove(renderer);
     }
 
-    public synchronized void showMessage(TextMessage message) {
+    synchronized void showMessage(TextMessage message) {
         renderers.forEach(r -> r.render(message));
     }
 
-    public synchronized Node getNode() {
+    synchronized Node getNode() {
         return node;
     }
 
-    public synchronized void setState(State state) {
+    synchronized void setState(State state) {
         this.state = state;
     }
 
-    public synchronized State getState() {
+    synchronized State getState() {
         return state;
     }
 
-    public synchronized boolean isRoot() {
+    synchronized boolean isRoot() {
         return node.isRoot;
     }
 
@@ -92,7 +92,7 @@ public final class Client implements IMessageListener {
      * @param message
      * @throws InterruptedException
      */
-    public synchronized void broadcastMessage(Message message) throws InterruptedException {
+    synchronized void broadcastMessage(Message message) throws InterruptedException {
         for (Neighbor neighbor : node.getNeighbors()) {
             if (!neighbor.getAddress().equals(message.getSender())) {
                 neighbor.sendMessage(message);
@@ -108,22 +108,18 @@ public final class Client implements IMessageListener {
      * @param receiver - address of the neighbor - messages receiver
      * @throws InterruptedException
      */
-    public synchronized void sendTo(Message message, InetSocketAddress receiver) throws InterruptedException {
+    synchronized void sendTo(Message message, InetSocketAddress receiver) throws InterruptedException {
         Neighbor neighbor = node.getChild(receiver);
         if (neighbor != null) {
             neighbor.sendMessage(message);
-        } else {
-
         }
     }
 
-    public synchronized void sendTo(Message message, InetSocketAddress receiver, Runnable onSuccess, Runnable onError)
+    synchronized void sendTo(Message message, InetSocketAddress receiver, Runnable onSuccess, Runnable onError)
             throws InterruptedException {
         Neighbor neighbor = node.getChild(receiver);
         if (neighbor != null) {
             neighbor.sendMessage(message, onSuccess, onError);
-        } else {
-
         }
     }
 
@@ -131,6 +127,7 @@ public final class Client implements IMessageListener {
     public void onTextMessageEntered(String message) {
         try {
             if (this.state == State.Running) {
+                System.out.println("sending message: " + message);
                 broadcastMessage(new TextMessage(message, node.getName()));
             }
         } catch (InterruptedException e) {
@@ -139,7 +136,7 @@ public final class Client implements IMessageListener {
         }
     }
 
-    public synchronized void registerMessage(Message message) {
+    synchronized void registerMessage(Message message) {
         CacheEntry entry = new CacheEntry(System.currentTimeMillis(), message);
         if (!cachedMessages.contains(entry)) {
             if (cachedMessages.size() == cacheSize) {
@@ -149,7 +146,7 @@ public final class Client implements IMessageListener {
         }
     }
 
-    public synchronized boolean isMessageRegistered(Message message) {
+    synchronized boolean isMessageRegistered(Message message) {
         return cachedMessages.contains(new CacheEntry(0, message));
     }
 
@@ -165,7 +162,7 @@ public final class Client implements IMessageListener {
     /**
      * Removes parent connection for current node
      */
-    public synchronized void detachParent() {
+    synchronized void detachParent() {
         if (!isRoot()) {
             Neighbor neighbor = node.getParent();
             if (neighbor != null) {
@@ -175,7 +172,7 @@ public final class Client implements IMessageListener {
         }
     }
 
-    public synchronized void setParent(InetSocketAddress address) throws IOException, JAXBException {
+    synchronized void setParent(InetSocketAddress address) throws IOException, JAXBException {
         if (isRoot()) {
             node.setParent(address);
         }
@@ -278,7 +275,7 @@ public final class Client implements IMessageListener {
             isRoot = false;
         }
 
-        public String getName() {
+        String getName() {
             return nodeName;
         }
 
@@ -288,11 +285,13 @@ public final class Client implements IMessageListener {
          * @throws IOException
          * @throws JAXBException
          */
-        public void addChild(InetSocketAddress address) throws IOException, JAXBException {
+        void addChild(InetSocketAddress address) throws IOException, JAXBException {
             if (!isRoot && parent.getAddress().equals(address)) {
                 throw new IllegalArgumentException("Cannot assign parent to be a child");
             }
-            children.put(address, new Neighbor(socket, address));
+            if (!children.containsKey(address)) {
+                children.put(address, new Neighbor(socket, address));
+            }
         }
 
         /**
@@ -300,14 +299,14 @@ public final class Client implements IMessageListener {
          * nothing happens
          * @param address - child to remove
          */
-        public void removeChild(InetSocketAddress address) {
+        void removeChild(InetSocketAddress address) {
             Neighbor neighbor = children.remove(address);
             if (neighbor != null) {
                 neighbor.detach();
             }
         }
 
-        public Neighbor getChild(InetSocketAddress address) {
+        Neighbor getChild(InetSocketAddress address) {
             return children.get(address);
         }
 
@@ -323,15 +322,15 @@ public final class Client implements IMessageListener {
             isRoot = true;
         }
 
-        public Neighbor getParent() {
+        Neighbor getParent() {
             return isRoot ? null : parent;
         }
 
-        public ArrayList<Neighbor> getChildren() {
+        ArrayList<Neighbor> getChildren() {
             return new ArrayList<>(children.values());
         }
 
-        public ArrayList<Neighbor> getNeighbors() {
+        ArrayList<Neighbor> getNeighbors() {
             ArrayList<Neighbor> neighbors = getChildren();
             if (!isRoot) {
                 neighbors.add(parent);
@@ -368,8 +367,6 @@ public final class Client implements IMessageListener {
         /**
          * The less the arrival time is, the longer the entry is in the cache.
          * All elements are meant to be sorted from oldest to earliest.
-         * @param cacheEntry
-         * @return
          */
         @Override
         public int compareTo(CacheEntry cacheEntry) {
