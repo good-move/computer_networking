@@ -36,6 +36,7 @@ public abstract class Message {
         this.mSender = mSender;
     }
 
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -43,15 +44,11 @@ public abstract class Message {
 
         Message message = (Message) o;
 
-        if (!mId.equals(message.mId)) return false;
-        return mSender != null ? mSender.equals(message.mSender) : message.mSender == null;
+        return mId.equals(message.mId);
     }
 
     @Override
     public int hashCode() {
-        int result = mId.hashCode();
-        result = 31 * result + (mSender != null ? mSender.hashCode() : 0);
-        return result;
+        return mId.hashCode();
     }
-
 }
