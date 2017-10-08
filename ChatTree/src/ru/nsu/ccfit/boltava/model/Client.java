@@ -14,15 +14,19 @@ import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class Client implements IMessageListener {
+
+    private static int cacheSize = 50;
 
     private State state;
     private Node node;
     private final DatagramSocket socket;
     private final int packetLossFactor;
     private HashSet<IMessageRenderer> renderers = new HashSet<>();
+    private TreeSet<CacheEntry> cachedMessages = new TreeSet<>();
 
     private Thread messageListener;
 
@@ -76,6 +80,10 @@ public final class Client implements IMessageListener {
         return state;
     }
 
+    public synchronized boolean isRoot() {
+        return node.getParent() == null;
+    }
+
     // ***************************** Message operation routines *****************************
 
     /**
@@ -84,7 +92,7 @@ public final class Client implements IMessageListener {
      * @param message
      * @throws InterruptedException
      */
-    public void broadcastMessage(Message message) throws InterruptedException {
+    public synchronized void broadcastMessage(Message message) throws InterruptedException {
         for (Neighbor neighbor : node.getNeighbors()) {
             if (!neighbor.getAddress().equals(message.getSender())) {
                 neighbor.sendMessage(message);
@@ -100,7 +108,7 @@ public final class Client implements IMessageListener {
      * @param receiver - address of the neighbor - messages receiver
      * @throws InterruptedException
      */
-    public void sendTo(Message message, InetSocketAddress receiver) throws InterruptedException {
+    public synchronized void sendTo(Message message, InetSocketAddress receiver) throws InterruptedException {
         Neighbor neighbor = node.getChild(receiver);
         if (neighbor != null) {
             neighbor.sendMessage(message);
@@ -109,7 +117,7 @@ public final class Client implements IMessageListener {
         }
     }
 
-    public void sendTo(Message message, InetSocketAddress receiver, Runnable onSuccess, Runnable onError)
+    public synchronized void sendTo(Message message, InetSocketAddress receiver, Runnable onSuccess, Runnable onError)
             throws InterruptedException {
         Neighbor neighbor = node.getChild(receiver);
         if (neighbor != null) {
@@ -131,6 +139,26 @@ public final class Client implements IMessageListener {
         }
     }
 
+    public synchronized void registerMessage(Message message) {
+        CacheEntry entry = new CacheEntry(System.currentTimeMillis(), message);
+        if (!cachedMessages.contains(entry)) {
+            if (cachedMessages.size() == cacheSize) {
+                cleanCache(cacheSize / 10);
+            }
+            cachedMessages.add(entry);
+        }
+    }
+
+    public synchronized boolean isMessageRegistered(Message message) {
+        return cachedMessages.contains(new CacheEntry(0, message));
+    }
+
+
+    private void cleanCache(int entriesToRemove) {
+        while (entriesToRemove-- > 0) {
+            cachedMessages.pollFirst();
+        }
+    }
 //    ***************************** Internal state manipulation routines *****************************
 
     /**
@@ -157,7 +185,7 @@ public final class Client implements IMessageListener {
 
     /**
      * MessageListener is supposed to wait for a udp packet to arrive,
-     * register it as "received" and delegate it to an IMessageHandler
+     * registerMessage it as "received" and delegate it to an IMessageHandler
      * to process.
      *
      * NOTE: before passing the serializer over to an IMessageHandler, listener
@@ -198,6 +226,9 @@ public final class Client implements IMessageListener {
 
     }
 
+    /**
+     * Represents client's state
+     */
     public enum State {
         Joining,
         Running,
@@ -209,7 +240,7 @@ public final class Client implements IMessageListener {
     public final class Node {
 
         private final String nodeName;
-        private final Neighbor parent;
+        private Neighbor parent;
         private ConcurrentHashMap<InetSocketAddress, Neighbor> children = new ConcurrentHashMap<>();
 
         Node(String name, Neighbor parent) {
@@ -247,6 +278,13 @@ public final class Client implements IMessageListener {
             return children.get(address);
         }
 
+        public void setParent(Neighbor parent) {
+            if (children.containsKey(parent.getAddress())) {
+                throw new IllegalArgumentException("Cannot assign a child to be the parent");
+            }
+            this.parent = parent;
+        }
+
         public Neighbor getParent() {
             return parent;
         }
@@ -261,6 +299,59 @@ public final class Client implements IMessageListener {
             return neighbors;
         }
 
+    }
+
+
+    /**
+     * CacheEntry represent Message arrival event in time. Message cache
+     * is intended to prevent multiple reactions to the same received message
+     * even if the ACK message has been sent to the sender.
+     *
+     * This class implements Comparable interface, so that cache search, insertion,
+     * and deletion could be made and optimized based on message arrival time.
+     *
+     * NOTE: that the class violates equals method convention:
+     * a.compareTo(b) doesn't imply a.equals(b). This is done intentionally, so
+     * that message search could be made straightforwardly to the programmer.
+     */
+    private static class CacheEntry implements Comparable<CacheEntry> {
+
+        private final long arrivalTime;
+        private final Message message;
+
+        private CacheEntry(long arrivalTime, Message message) {
+            this.arrivalTime = arrivalTime;
+            this.message = message;
+        }
+
+
+        /**
+         * The less the arrival time is, the longer the entry is in the cache.
+         * All elements are meant to be sorted from oldest to earliest.
+         * @param cacheEntry
+         * @return
+         */
+        @Override
+        public int compareTo(CacheEntry cacheEntry) {
+            if (arrivalTime < cacheEntry.arrivalTime) return -1;
+            else if (arrivalTime > cacheEntry.arrivalTime) return 1;
+            else return 0;
+        }
+
+        @Override
+        public int hashCode() {
+            return (int) (arrivalTime ^ (arrivalTime >>> 32));
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            CacheEntry that = (CacheEntry) o;
+
+            return message.equals(that.message);
+        }
     }
 
 }
