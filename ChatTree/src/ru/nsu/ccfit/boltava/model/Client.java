@@ -1,5 +1,7 @@
 package ru.nsu.ccfit.boltava.model;
 
+import ru.nsu.ccfit.boltava.model.event.AckReceivedEvent;
+import ru.nsu.ccfit.boltava.model.event.EventDispatcher;
 import ru.nsu.ccfit.boltava.model.message.JoinMessage;
 import ru.nsu.ccfit.boltava.model.message.Message;
 import ru.nsu.ccfit.boltava.model.message.TextMessage;
@@ -20,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class Client implements IMessageListener {
 
     private static int cacheSize = 50;
+    private static EventDispatcher<AckReceivedEvent> eventDispatcher = new EventDispatcher<>();
 
     private State state;
     private Node node;
@@ -40,10 +43,10 @@ public final class Client implements IMessageListener {
         System.out.println("Initializing node...");
 
         this.socket = new DatagramSocket(port);
-        Neighbor parent = (parentAddress == null) ? null : new Neighbor(this.socket, parentAddress);
+        Neighbor parent = (parentAddress == null) ? null : new Neighbor(this.socket, parentAddress, eventDispatcher);
         this.node =  parentAddress == null ? new Node(nodeName) : new Node(nodeName, parent);
         this.packetLossFactor = packetLossFactor;
-        messageListener = new Thread(new Client.MessageListener(socket, new MessageHandler(null)));
+        messageListener = new Thread(new Client.MessageListener(socket, new MessageHandler(this, eventDispatcher)));
         messageListener.start();
         if (!isRoot()) {
             state = State.Joining;
@@ -89,8 +92,7 @@ public final class Client implements IMessageListener {
     /**
      * Sends message to each neighbor except the message sender.
      *
-     * @param message
-     * @throws InterruptedException
+     * @param message - message to broadcast
      */
     synchronized void broadcastMessage(Message message) throws InterruptedException {
         for (Neighbor neighbor : node.getNeighbors()) {
@@ -106,10 +108,9 @@ public final class Client implements IMessageListener {
      *
      * @param message - message to send
      * @param receiver - address of the neighbor - messages receiver
-     * @throws InterruptedException
      */
     synchronized void sendTo(Message message, InetSocketAddress receiver) throws InterruptedException {
-        Neighbor neighbor = node.getChild(receiver);
+        Neighbor neighbor = node.getNeighbor(receiver);
         if (neighbor != null) {
             neighbor.sendMessage(message);
         }
@@ -117,7 +118,7 @@ public final class Client implements IMessageListener {
 
     synchronized void sendTo(Message message, InetSocketAddress receiver, Runnable onSuccess, Runnable onError)
             throws InterruptedException {
-        Neighbor neighbor = node.getChild(receiver);
+        Neighbor neighbor = node.getNeighbor(receiver);
         if (neighbor != null) {
             neighbor.sendMessage(message, onSuccess, onError);
         }
@@ -142,6 +143,7 @@ public final class Client implements IMessageListener {
             if (cachedMessages.size() == cacheSize) {
                 cleanCache(cacheSize / 10);
             }
+            System.out.println("ADDED CACHE ENTRY");
             cachedMessages.add(entry);
         }
     }
@@ -186,11 +188,15 @@ public final class Client implements IMessageListener {
      * Tries to send JOIN message to parent to establish logical connection
      */
     private void joinParent() {
+        System.out.println("Joining parent...");
         try {
             node.getParent()
                 .sendMessage(
                         new JoinMessage(node.getName()),
-                        () -> this.state = State.Running,
+                        () -> {
+                            System.out.println("Joined parent!");
+                            this.state = State.Running;
+                        },
                         () -> {
                             this.state = State.Terminated;
                             System.out.println("Failed to connect to parent");
@@ -282,15 +288,13 @@ public final class Client implements IMessageListener {
         /**
          * Adds child to children list. If such child already exists, nothing happens.
          * @param address - child to add
-         * @throws IOException
-         * @throws JAXBException
          */
         void addChild(InetSocketAddress address) throws IOException, JAXBException {
             if (!isRoot && parent.getAddress().equals(address)) {
                 throw new IllegalArgumentException("Cannot assign parent to be a child");
             }
             if (!children.containsKey(address)) {
-                children.put(address, new Neighbor(socket, address));
+                children.put(address, new Neighbor(socket, address, eventDispatcher));
             }
         }
 
@@ -314,7 +318,7 @@ public final class Client implements IMessageListener {
             if (children.containsKey(address)) {
                 throw new IllegalArgumentException("Cannot assign a child to be the parent");
             }
-            this.parent = new Neighbor(socket, address);
+            this.parent = new Neighbor(socket, address, eventDispatcher);
             isRoot = false;
         }
 
@@ -336,6 +340,13 @@ public final class Client implements IMessageListener {
                 neighbors.add(parent);
             }
             return neighbors;
+        }
+
+        Neighbor getNeighbor(InetSocketAddress address) {
+            if (!isRoot && parent.getAddress().equals(address)) {
+                return parent;
+            }
+            return children.get(address);
         }
 
     }
@@ -376,11 +387,6 @@ public final class Client implements IMessageListener {
         }
 
         @Override
-        public int hashCode() {
-            return (int) (arrivalTime ^ (arrivalTime >>> 32));
-        }
-
-        @Override
         public boolean equals(Object o) {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
@@ -388,6 +394,11 @@ public final class Client implements IMessageListener {
             CacheEntry that = (CacheEntry) o;
 
             return message.equals(that.message);
+        }
+
+        @Override
+        public int hashCode() {
+            return message.hashCode();
         }
     }
 

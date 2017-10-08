@@ -51,4 +51,8 @@ public class RejoinMessage extends Message {
     public int getPort() {
         return port;
     }
+
+    public InetSocketAddress getNewParentAddress() {
+        return new InetSocketAddress(address, port);
+    }
 }

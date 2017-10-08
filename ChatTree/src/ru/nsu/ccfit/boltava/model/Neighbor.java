@@ -1,7 +1,8 @@
 package ru.nsu.ccfit.boltava.model;
 
+import ru.nsu.ccfit.boltava.model.event.EventDispatcher;
 import ru.nsu.ccfit.boltava.model.event.IEventListener;
-import ru.nsu.ccfit.boltava.model.event.MessageReceivedEvent;
+import ru.nsu.ccfit.boltava.model.event.AckReceivedEvent;
 import ru.nsu.ccfit.boltava.model.message.Message;
 import ru.nsu.ccfit.boltava.model.net.RobustMessageSender;
 import ru.nsu.ccfit.boltava.model.serializer.XmlMessageSerializer;
@@ -21,20 +22,24 @@ public class Neighbor {
     private static final int MAX_THREADS_COUNT = 1;
     private static final int QUEUE_SIZE = 500;
 
+    private EventDispatcher<AckReceivedEvent> eventDispatcher;
     private ExecutorService threadPool = Executors.newFixedThreadPool(MAX_THREADS_COUNT);
     private LinkedBlockingQueue<ExecutionPack> queue = new LinkedBlockingQueue<>(QUEUE_SIZE);
 
     private final InetSocketAddress address;
     private final DatagramSocket socket;
 
-    public Neighbor(DatagramSocket socket, InetSocketAddress address) throws IOException, JAXBException {
+    public Neighbor(DatagramSocket socket, InetSocketAddress address, EventDispatcher<AckReceivedEvent> dispatcher)
+            throws IOException, JAXBException {
         this.socket = socket;
         this.address = address;
+        this.eventDispatcher = dispatcher;
 
 //        MessageSender sender = new MessageSender();
-        for (int i = 0; i < MAX_THREADS_COUNT; ++i) {
-            threadPool.submit(new MessageSender());
-        }
+//        for (int i = 0; i < MAX_THREADS_COUNT; ++i) {
+//            threadPool.submit(new MessageSender());
+//        }
+        new Thread(new MessageSender(), "Neighbor").start();
     }
 
     /**
@@ -72,9 +77,10 @@ public class Neighbor {
         }
 
         queue.put(new ExecutionPack(message, onSuccess, onError));
+        System.out.println("OFFERED MESSAGE");
     }
 
-    private final class MessageSender implements Runnable, IEventListener<MessageReceivedEvent> {
+    private final class MessageSender implements Runnable, IEventListener<AckReceivedEvent> {
 
         private RobustMessageSender sender;
 
@@ -88,13 +94,18 @@ public class Neighbor {
                 ExecutionPack pack;
                 try {
                     pack = queue.take();
+                    System.out.println("Sending new message to neighbor ");
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                     break;
                 }
 
+                AckReceivedEvent event = new AckReceivedEvent(
+                        address, pack.getMessage().getId()
+                );
                 try {
-                    // subscribe to message event
+                    System.out.println("subscribing.");
+                    eventDispatcher.subscribe(event, this);
                     sender.send(pack.getMessage(), address);
                 } catch (JAXBException | IOException | InterruptedException e) {
                     e.printStackTrace();
@@ -102,22 +113,31 @@ public class Neighbor {
                         pack.getOnError().run();
                     }
                 } catch (RobustMessageSender.SenderStoppedException e) {
+                    System.out.println("trying to run onSuccess");
                     if (pack.getOnSuccess() != null) {
                         pack.getOnSuccess().run();
                     }
                 } catch (TimeoutException e) {
+                    System.out.println("trying to run onError");
+                    System.out.println(e.getMessage());
                     if (pack.getOnError() != null) {
                         pack.getOnError().run();
                     }
-                } finally {
-                    // unsubscribe from message event
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    System.err.println(e.getMessage());
+                }
+                finally {
+                    System.out.println("unsubscribing.");
+                    eventDispatcher.unsubscribe(event, this);
                 }
 
             }
         }
 
         @Override
-        public void act(MessageReceivedEvent event) {
+        public void act(AckReceivedEvent event) {
+            System.out.println("Received ACK from " + address);
             sender.cancel();
         }
 

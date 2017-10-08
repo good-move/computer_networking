@@ -16,11 +16,13 @@ import java.util.concurrent.TimeoutException;
  */
 public class RobustMessageSender {
 
-    private final static int DEFAULT_TIMEOUT = 4 * 1000;
-    private final static int WAIT_INTERVAL = 250;
+    private final static int DEFAULT_TIMEOUT = 1000;
+    private final static int WAIT_INTERVAL = 100;
 
     private final DatagramMessageSender sender;
     private volatile boolean stopped = false;
+
+    private final Object lock = new Object();
 
     public RobustMessageSender(DatagramSocket socket, IMessageSerializer<String> serializer)
             throws IOException, JAXBException {
@@ -55,21 +57,25 @@ public class RobustMessageSender {
      */
     public void send(Message message, InetSocketAddress receiver, int timeout)
             throws JAXBException, IOException, TimeoutException, InterruptedException, SenderStoppedException {
-        stopped = false;
-        long startTime = System.currentTimeMillis();
-        while (!stopped && System.currentTimeMillis() - startTime < timeout) {
-            sender.send(message, receiver);
-            wait(WAIT_INTERVAL);
-        }
-        if (stopped) {
-            throw new SenderStoppedException("Sender interrupted");
-        } else {
-            throw new TimeoutException("Delivery timeout hit");
+        synchronized (lock) {
+            stopped = false;
+            long startTime = System.currentTimeMillis();
+            while (!stopped && System.currentTimeMillis() - startTime < timeout) {
+                System.out.println("sending message ..");
+                sender.send(message, receiver);
+                lock.wait(WAIT_INTERVAL);
+            }
+            lock.notifyAll();
+            if (stopped) {
+                throw new SenderStoppedException("Sender interrupted");
+            } else {
+                throw new TimeoutException("Delivery timeout hit");
+            }
         }
     }
 
     public void cancel() {
-        stopped = false;
+        stopped = true;
     }
 
 

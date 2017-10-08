@@ -10,11 +10,10 @@ import java.util.HashSet;
  * is published.
  *
  * @param <E> - class, which extends Event class.
- * @param <Listener> class, which extends IEventListener class
  */
-public class EventDispatcher<E extends Event, Listener extends IEventListener<E>> {
+public class EventDispatcher<E extends Event> {
 
-    private HashMap<E, HashSet<Listener>> records = new HashMap<>();
+    private HashMap<E, HashSet<IEventListener<E>>> records = new HashMap<>();
 
     /**
      * Adds a listener to the list of subscribers to the specified event.
@@ -23,10 +22,12 @@ public class EventDispatcher<E extends Event, Listener extends IEventListener<E>
      * @param event - event to subscribe to
      * @param listener - listener to add
      */
-    public synchronized void subscribe(final E event, final Listener listener) {
-        HashSet<Listener> listeners = records.get(event);
-        if (listeners == null) {
+    public synchronized void subscribe(E event, IEventListener<E> listener) {
+        HashSet<IEventListener<E>> listeners;
+        if (!records.containsKey(event)) {
             listeners = new HashSet<>();
+        } else {
+            listeners = records.get(event);
         }
         listeners.add(listener);
         records.put(event, listeners);
@@ -42,8 +43,8 @@ public class EventDispatcher<E extends Event, Listener extends IEventListener<E>
      * @param event - event to unsubscribe from
      * @param listener - listener to remove
      */
-    public synchronized void unsubscribe(final E event, final Listener listener) {
-        HashSet<Listener> listeners = records.get(event);
+    public synchronized void unsubscribe(final E event, final IEventListener<E> listener) {
+        HashSet<IEventListener<E>> listeners = records.get(event);
 
         // if such event hasn't been registered, return
         if (listeners == null) {
@@ -65,13 +66,13 @@ public class EventDispatcher<E extends Event, Listener extends IEventListener<E>
      * @param event - event to publish
      */
     public void publish(E event) {
-        HashSet<Listener> listeners = records.get(event);
+        HashSet<IEventListener<E>> listeners = records.get(event);
         if (listeners == null) {
             return;
         }
 
         // !!! bad for heavy tasks
-        for (Listener listener : listeners) {
+        for (IEventListener<E> listener : listeners) {
             listener.act(event);
         }
 

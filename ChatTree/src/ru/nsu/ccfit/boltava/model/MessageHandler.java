@@ -1,5 +1,7 @@
 package ru.nsu.ccfit.boltava.model;
 
+import ru.nsu.ccfit.boltava.model.event.AckReceivedEvent;
+import ru.nsu.ccfit.boltava.model.event.EventDispatcher;
 import ru.nsu.ccfit.boltava.model.message.*;
 import static ru.nsu.ccfit.boltava.model.Client.State.*;
 
@@ -10,8 +12,10 @@ import java.net.InetSocketAddress;
 public class MessageHandler implements IMessageHandler {
 
     private final Client client;
+    private EventDispatcher<AckReceivedEvent> eventDispatcher;
 
-    MessageHandler(Client client) {
+    MessageHandler(Client client, EventDispatcher<AckReceivedEvent> dispatcher) {
+        this.eventDispatcher = dispatcher;
         this.client = client;
     }
 
@@ -19,6 +23,7 @@ public class MessageHandler implements IMessageHandler {
     public void handle(AckMessage message) {
         System.out.println("Received ACK message");
         // should publish ACK event
+        eventDispatcher.publish(new AckReceivedEvent(message.getSender(), message.getId()));
     }
 
     @Override
@@ -28,9 +33,9 @@ public class MessageHandler implements IMessageHandler {
 
     @Override
     public void handle(JoinMessage message) {
-        System.out.println("Received JOIN message");
         if ((client.getState() == Running || client.getState() == Moving) &&
             !client.isMessageRegistered(message)) {
+            System.out.println("Received new JOIN message");
             try {
                 client.registerMessage(message);
                 System.out.println(message.getNodeName() + " has joined chat");
@@ -108,18 +113,18 @@ public class MessageHandler implements IMessageHandler {
 
     @Override
     public void handle(TextMessage message) {
-        System.out.println("Received TEXT message");
-
-        if (client.getState() == Running || client.getState() == Moving) {
+        if ((client.getState() == Running || client.getState() == Moving) &&
+            !client.isMessageRegistered(message)) {
+            System.out.println("Received TEXT message");
             try {
+                client.registerMessage(message);
                 System.out.println("Sending AckText to " + message.getSenderName());
-                client.sendTo(new AckMessage(message.getId()), message.getSender());
-                System.out.println("Sent AckText to " + message.getSenderName());
-                if (!client.isMessageRegistered(message)) {
-                    client.registerMessage(message);
-                    client.showMessage(message);
-                    client.broadcastMessage(message);
-                }
+                client.sendTo(new AckMessage(message.getId()), message.getSender(),
+                        null,
+                        () -> System.out.println("Sent AckText to " + message.getSenderName())
+                        );
+                client.showMessage(message);
+                client.broadcastMessage(message);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

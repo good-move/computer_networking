@@ -56,7 +56,7 @@ public class ChatTree {
             view.addMessageListener(client);
             client.addMessageRenderer(view);
 
-            new Thread(view).start();
+            new Thread(view, "ConsoleView").start();
 
         } catch (NumberFormatException e) {
             System.err.println("Failed to parse port. " + e.getMessage());

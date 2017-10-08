@@ -5,13 +5,13 @@ import com.sun.istack.internal.NotNull;
 import java.net.SocketAddress;
 import java.util.UUID;
 
-public class MessageReceivedEvent extends Event {
+public class AckReceivedEvent extends Event {
 
-    private final String HASHCODE_SEED = MessageReceivedEvent.class.getCanonicalName();
+    private final String HASHCODE_SEED = AckReceivedEvent.class.getCanonicalName();
     private final SocketAddress sender;
     private final UUID messageId;
 
-    public MessageReceivedEvent(@NotNull final SocketAddress sender, @NotNull final UUID messageId) {
+    public AckReceivedEvent(@NotNull final SocketAddress sender, @NotNull final UUID messageId) {
         this.sender = sender;
         this.messageId = messageId;
     }
@@ -24,12 +24,13 @@ public class MessageReceivedEvent extends Event {
         return sender;
     }
 
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        MessageReceivedEvent that = (MessageReceivedEvent) o;
+        AckReceivedEvent that = (AckReceivedEvent) o;
 
         if (!HASHCODE_SEED.equals(that.HASHCODE_SEED)) return false;
         if (!sender.equals(that.sender)) return false;
@@ -43,5 +44,4 @@ public class MessageReceivedEvent extends Event {
         result = 31 * result + messageId.hashCode();
         return result;
     }
-
 }
