@@ -74,20 +74,20 @@ public class MessageHandler implements IMessageHandler {
             try {
                 client.setState(Moving);
                 client.sendTo(
-                        new JoinMessage(client.getNode().getName()),
-                        message.getNewParentAddress(),
-                        () -> {
-                            try {
-                                client.sendTo(new AckMessage(message.getId()), parentAddress);
-                                client.detachParent();
-                                client.setParent(message.getNewParentAddress());
-                                client.setState(Running);
-                            } catch (InterruptedException | JAXBException | IOException e) {
-                                e.printStackTrace();
-                                System.err.println("Failed to set new parent");
-                            }
-                        },
-                        client::detachParent
+                    new JoinMessage(client.getNode().getName()),
+                    message.getNewParentAddress(),
+                    () -> {
+                        try {
+                            client.sendTo(new AckMessage(message.getId()), parentAddress);
+                            client.detachParent();
+                            client.setParent(message.getNewParentAddress());
+                            client.setState(Running);
+                        } catch (InterruptedException | JAXBException | IOException e) {
+                            e.printStackTrace();
+                            System.err.println("Failed to set new parent");
+                        }
+                    },
+                    client::detachParent
                 );
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -119,10 +119,11 @@ public class MessageHandler implements IMessageHandler {
             try {
                 client.registerMessage(message);
                 System.out.println("Sending AckText to " + message.getSenderName());
-                client.sendTo(new AckMessage(message.getId()), message.getSender(),
-                        null,
-                        () -> System.out.println("Sent AckText to " + message.getSenderName())
-                        );
+                client.sendTo(
+                    new AckMessage(message.getId()), message.getSender(),
+                    null,
+                    () -> System.out.println("Sent AckText to " + message.getSenderName())
+                );
                 client.showMessage(message);
                 client.broadcastMessage(message);
             } catch (InterruptedException e) {

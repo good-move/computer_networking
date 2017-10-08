@@ -53,12 +53,16 @@ public class Neighbor {
      *
      * @param message - message to send to the neighbor
      */
-    public void sendMessage(Message message) throws InterruptedException {
-        feedQueue(message, null, null);
+    public CompletableFuture<Message> sendMessage(Message message) throws InterruptedException {
+        return feedQueue(message, null, null, null);
     }
 
-    public void sendMessage(Message message, Runnable onSuccess, Runnable onError) throws InterruptedException {
-        feedQueue(message, onSuccess, onError);
+    public CompletableFuture<Message> sendMessage(Message message, Runnable onSuccess, Runnable onError) throws InterruptedException {
+        return feedQueue(message, onSuccess, onError, null);
+    }
+
+    public CompletableFuture<Message> sendMessage(Message message, Runnable onResult) throws InterruptedException {
+        return feedQueue(message, null, null, onResult);
     }
 
     public InetSocketAddress getAddress() {
@@ -71,13 +75,19 @@ public class Neighbor {
         }
     }
 
-    private void feedQueue(Message message, Runnable onSuccess, Runnable onError) throws InterruptedException {
+    private CompletableFuture<Message> feedQueue(Message message,
+                                                 Runnable onSuccess,
+                                                 Runnable onError,
+                                                 Runnable onAny) throws InterruptedException {
         if (message == null) {
             throw new IllegalArgumentException("Message can't be null");
         }
+        CompletableFuture<Message> future = new CompletableFuture<>();
 
-        queue.put(new ExecutionPack(message, onSuccess, onError));
+        queue.put(new ExecutionPack(message, onSuccess, onError, onAny, future));
         System.out.println("OFFERED MESSAGE");
+
+        return future;
     }
 
     private final class MessageSender implements Runnable, IEventListener<AckReceivedEvent> {
@@ -123,12 +133,19 @@ public class Neighbor {
                     if (pack.getOnError() != null) {
                         pack.getOnError().run();
                     }
+                    pack.getFuture().cancel(true);
                 } catch (Exception e) {
                     e.printStackTrace();
                     System.err.println(e.getMessage());
                 }
                 finally {
+                    if (pack.onError == null &&
+                        pack.onSuccess == null &&
+                        pack.onResult != null) {
+                        pack.onResult.run();
+                    }
                     System.out.println("unsubscribing.");
+                    pack.getFuture().complete(pack.getMessage());
                     eventDispatcher.unsubscribe(event, this);
                 }
 
@@ -148,11 +165,18 @@ public class Neighbor {
         private final Message message;
         private final Runnable onSuccess;
         private final Runnable onError;
+        private final Runnable onResult;
+        private final CompletableFuture<Message> future;
 
-        ExecutionPack(Message message, Runnable onSuccess, Runnable onError) {
+        ExecutionPack(Message message,
+                      Runnable onSuccess,
+                      Runnable onError,
+                      Runnable onResult, CompletableFuture<Message> future) {
             this.message = message;
             this.onSuccess = onSuccess;
             this.onError = onError;
+            this.onResult = onResult;
+            this.future = future;
         }
 
         public Message getMessage() {
@@ -165,6 +189,10 @@ public class Neighbor {
 
         public Runnable getOnError() {
             return onError;
+        }
+
+        public CompletableFuture<Message> getFuture() {
+            return future;
         }
     }
 

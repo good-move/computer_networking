@@ -2,9 +2,7 @@ package ru.nsu.ccfit.boltava.model;
 
 import ru.nsu.ccfit.boltava.model.event.AckReceivedEvent;
 import ru.nsu.ccfit.boltava.model.event.EventDispatcher;
-import ru.nsu.ccfit.boltava.model.message.JoinMessage;
-import ru.nsu.ccfit.boltava.model.message.Message;
-import ru.nsu.ccfit.boltava.model.message.TextMessage;
+import ru.nsu.ccfit.boltava.model.message.*;
 import ru.nsu.ccfit.boltava.model.net.DatagramMessageReceiver;
 import ru.nsu.ccfit.boltava.model.serializer.XmlMessageSerializer;
 import ru.nsu.ccfit.boltava.view.IMessageListener;
@@ -17,7 +15,10 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.TreeSet;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 
 public final class Client implements IMessageListener {
 
@@ -54,6 +55,8 @@ public final class Client implements IMessageListener {
         } else {
             state = State.Running;
         }
+
+        setShutDownHook();
     }
 
 
@@ -169,6 +172,7 @@ public final class Client implements IMessageListener {
             Neighbor neighbor = node.getParent();
             if (neighbor != null) {
                 neighbor.detach();
+                node.parent = null;
             }
             node.makeRoot();
         }
@@ -192,21 +196,103 @@ public final class Client implements IMessageListener {
         try {
             node.getParent()
                 .sendMessage(
-                        new JoinMessage(node.getName()),
-                        () -> {
-                            System.out.println("Joined parent!");
-                            this.state = State.Running;
-                        },
-                        () -> {
-                            this.state = State.Terminated;
-                            System.out.println("Failed to connect to parent");
-                            messageListener.interrupt();
-                            node.getParent().detach();
-                        }
+                    new JoinMessage(node.getName()),
+                    () -> {
+                        System.out.println("Joined parent!");
+                        this.state = State.Running;
+                    }, () -> {
+                        this.state = State.Terminated;
+                        System.out.println("Failed to connect to parent");
+                        messageListener.interrupt();
+                        node.getParent().detach();
+                    }
                 );
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    private void setShutDownHook() {
+        Runtime.getRuntime().addShutdownHook(new Thread(this::shutDown));
+    }
+
+    /**
+     * Final method before the client is shut down.
+     *
+     * 1.1 If this client is not root, it's got a parent.
+     * 1.2 Otherwise, it chooses one child to be new root and sends it a ROOT msg.
+     * 2. Client sends REJOIN messages to all non-root children.
+     * 3. When all children messages complete, it sends Leave msg to parent.
+     * 4. Shuts down itself and associated view
+     * 5. Calls exit.
+     */
+    private void shutDown() {
+        this.setState(State.Shutting);
+        // clean all msg queues
+        if (isRoot()) {
+            Neighbor pseudoParent = null;
+            ArrayList<Neighbor> children = node.getChildren();
+            if (children.isEmpty()) {
+                // shutDown fast
+            } else {
+                for (Neighbor child : node.getChildren()) {
+                    try {
+                        child.sendMessage(
+                            new RootMessage(),
+                            () -> {
+                                child.detach();
+                            }, () -> {
+
+                            }
+                        ).get();
+                        pseudoParent = child;
+                        break;
+                    } catch (InterruptedException | CancellationException | ExecutionException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                if (pseudoParent != null) {
+                    broadcastRejoin(pseudoParent);
+                } else {
+                    // shutdown fast
+                }
+            }
+        } else {
+            try {
+                Neighbor parent = node.parent;
+                broadcastRejoin(parent);
+                parent.sendMessage(new LeaveMessage(), this::detachParent).get();
+            } catch (InterruptedException | ExecutionException e) {
+                e.printStackTrace();
+            }
+        }
+        setState(State.Terminated);
+    }
+
+    private void broadcastRejoin(Neighbor nextParent) {
+        InetSocketAddress parentAddress = nextParent.getAddress();
+        ArrayList<CompletableFuture<Message>> rejoinRequests = new ArrayList<>();
+        for (Neighbor neighbor : node.getNeighbors()) {
+            try {
+                if (neighbor.getAddress().equals(nextParent.getAddress())) continue;
+
+                rejoinRequests.add(neighbor.sendMessage(
+                        new RejoinMessage(parentAddress.getAddress(), parentAddress.getPort()),
+                        () -> {
+                            neighbor.detach();
+                            node.removeChild(neighbor.getAddress());
+                        }
+                ));
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                rejoinRequests.get(rejoinRequests.size() - 1).cancel(true);
+            }
+        }
+
+        CompletableFuture.allOf(
+                rejoinRequests.toArray(new CompletableFuture[rejoinRequests.size()])
+        ).join();
     }
 
     /**
