@@ -38,7 +38,7 @@ public interface IMessageHandler {
 
     /**
      * Other node's request to become this node's child and join chat tree.
-     * This request is only processed when in Running state.
+     * This request is only processed when in RUNNING state.
      * @param message
      */
     void handle(JoinMessage message);
@@ -62,8 +62,8 @@ public interface IMessageHandler {
     void handle(RootMessage message);
 
     /**
-     * If text serializer is received and current node is not in Joining or
-     * Terminated state, then the serializer must be registered by the node, its text
+     * If text serializer is received and current node is not in JOINING or
+     * TERMINATED state, then the serializer must be registered by the node, its text
      * should be shown to the user, and ACK response should be sent back to the
      * sender
      *

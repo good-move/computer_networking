@@ -50,10 +50,10 @@ public final class Client implements IMessageListener {
         messageListener = new Thread(new Client.MessageListener(socket, new MessageHandler(this, eventDispatcher)));
         messageListener.start();
         if (!isRoot()) {
-            state = State.Joining;
+            state = State.JOINING;
             joinParent();
         } else {
-            state = State.Running;
+            state = State.RUNNING;
         }
 
         setShutDownHook();
@@ -130,8 +130,8 @@ public final class Client implements IMessageListener {
     @Override
     public void onTextMessageEntered(String message) {
         try {
-            if (this.state == State.Running) {
-                System.out.println("sending message: " + message);
+            if (this.state == State.RUNNING) {
+                System.out.println("will broadcast message: " + message);
                 broadcastMessage(new TextMessage(message, node.getName()));
             }
         } catch (InterruptedException e) {
@@ -192,16 +192,16 @@ public final class Client implements IMessageListener {
      * Tries to send JOIN message to parent to establish logical connection
      */
     private void joinParent() {
-        System.out.println("Joining parent...");
+        System.out.println("JOINING parent...");
         try {
             node.getParent()
                 .sendMessage(
                     new JoinMessage(node.getName()),
                     () -> {
                         System.out.println("Joined parent!");
-                        this.state = State.Running;
+                        this.state = State.RUNNING;
                     }, () -> {
-                        this.state = State.Terminated;
+                        this.state = State.TERMINATED;
                         System.out.println("Failed to connect to parent");
                         messageListener.interrupt();
                         node.getParent().detach();
@@ -213,7 +213,7 @@ public final class Client implements IMessageListener {
     }
 
     private void setShutDownHook() {
-        Runtime.getRuntime().addShutdownHook(new Thread(this::shutDown));
+        Runtime.getRuntime().addShutdownHook(new Thread(this::shutDown, "ShutDown Hook"));
     }
 
     /**
@@ -227,35 +227,36 @@ public final class Client implements IMessageListener {
      * 5. Calls exit.
      */
     private void shutDown() {
-        this.setState(State.Shutting);
+        this.setState(State.SHUTTING);
         // clean all msg queues
         if (isRoot()) {
+            System.out.println(String.format("%s: shutdown", Thread.currentThread().getName()));
             Neighbor pseudoParent = null;
             ArrayList<Neighbor> children = node.getChildren();
             if (children.isEmpty()) {
                 // shutDown fast
             } else {
+                System.out.println(String.format("%s: looking for next root", Thread.currentThread().getName()));
                 for (Neighbor child : node.getChildren()) {
                     try {
                         child.sendMessage(
                             new RootMessage(),
-                            () -> {
-                                child.detach();
-                            }, () -> {
-
-                            }
+                                child::detach
                         ).get();
                         pseudoParent = child;
                         break;
                     } catch (InterruptedException | CancellationException | ExecutionException e) {
                         e.printStackTrace();
+                        System.err.println(Thread.currentThread().getName() + ": child not available");
                     }
                 }
 
                 if (pseudoParent != null) {
+                    System.out.println(String.format("%s: found next root", Thread.currentThread().getName()));
                     broadcastRejoin(pseudoParent);
                 } else {
                     // shutdown fast
+                    System.out.println(String.format("%s: didn't find next root", Thread.currentThread().getName()));
                 }
             }
         } else {
@@ -267,7 +268,7 @@ public final class Client implements IMessageListener {
                 e.printStackTrace();
             }
         }
-        setState(State.Terminated);
+        setState(State.TERMINATED);
     }
 
     private void broadcastRejoin(Neighbor nextParent) {
@@ -342,11 +343,11 @@ public final class Client implements IMessageListener {
      * Represents client's state
      */
     public enum State {
-        Joining,
-        Running,
-        Shutting,
-        Moving,
-        Terminated
+        JOINING,
+        RUNNING,
+        SHUTTING,
+        MOVING,
+        TERMINATED
     }
 
     public final class Node {

@@ -33,7 +33,7 @@ public class MessageHandler implements IMessageHandler {
 
     @Override
     public void handle(JoinMessage message) {
-        if ((client.getState() == Running || client.getState() == Moving) &&
+        if ((client.getState() == RUNNING || client.getState() == MOVING) &&
             !client.isMessageRegistered(message)) {
             System.out.println("Received new JOIN message");
             try {
@@ -50,10 +50,10 @@ public class MessageHandler implements IMessageHandler {
 
     @Override
     public void handle(LeaveMessage message) {
-        System.out.println("Received LEAVE message");
 
-        if ((client.getState() == Running || client.getState() == Moving) &&
+        if ((client.getState() == RUNNING || client.getState() == MOVING) &&
             client.getNode().getChild(message.getSender()) != null) {
+            System.out.println("Received LEAVE message");
             try {
                 client.getNode().removeChild(message.getSender());
                 client.sendTo(new AckMessage(message.getId()), message.getSender());
@@ -65,14 +65,20 @@ public class MessageHandler implements IMessageHandler {
 
     @Override
     public void handle(RejoinMessage message) {
-        System.out.println("Received REJOIN message");
         if(client.isRoot()) return;
 
         InetSocketAddress parentAddress = client.getNode().getParent().getAddress();
-        if (client.getState() == Running &&
-            message.getSender().equals(parentAddress)) {
+        if (client.getState() == RUNNING &&
+            message.getSender().equals(parentAddress) &&
+            !client.isMessageRegistered(message)) {
+            System.out.println("Received REJOIN message");
+
             try {
-                client.setState(Moving);
+                client.registerMessage(message);
+                client.setState(MOVING);
+                // in order to be able to send message to next parent
+                client.getNode().addChild(message.getNewParentAddress());
+
                 client.sendTo(
                     new JoinMessage(client.getNode().getName()),
                     message.getNewParentAddress(),
@@ -80,16 +86,26 @@ public class MessageHandler implements IMessageHandler {
                         try {
                             client.sendTo(new AckMessage(message.getId()), parentAddress);
                             client.detachParent();
+                            // remove temporary child and set new parent
+                            client.getNode().removeChild(message.getNewParentAddress());
                             client.setParent(message.getNewParentAddress());
-                            client.setState(Running);
+
+                            client.setState(RUNNING);
                         } catch (InterruptedException | JAXBException | IOException e) {
                             e.printStackTrace();
                             System.err.println("Failed to set new parent");
                         }
-                    },
-                    client::detachParent
+                    },() -> {
+                            client.detachParent();
+                            client.getNode().removeChild(message.getNewParentAddress());
+                            client.setState(RUNNING);
+                        }
                 );
             } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (JAXBException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
                 e.printStackTrace();
             }
         }
@@ -97,12 +113,13 @@ public class MessageHandler implements IMessageHandler {
 
     @Override
     public void handle(RootMessage message) {
-        System.out.println("Received ROOT message");
-
-        if (client.getState() == Running &&
+        if (client.getState() == RUNNING &&
             !client.isRoot() &&
-            message.getSender().equals(client.getNode().getParent().getAddress())) {
+            message.getSender().equals(client.getNode().getParent().getAddress()) &&
+            !client.isMessageRegistered(message)) {
+            System.out.println("Received ROOT message");
             try {
+                client.registerMessage(message);
                 client.sendTo(new AckMessage(message.getId()), message.getSender());
                 client.detachParent();
             } catch (InterruptedException e) {
@@ -113,7 +130,7 @@ public class MessageHandler implements IMessageHandler {
 
     @Override
     public void handle(TextMessage message) {
-        if ((client.getState() == Running || client.getState() == Moving) &&
+        if ((client.getState() == RUNNING || client.getState() == MOVING) &&
             !client.isMessageRegistered(message)) {
             System.out.println("Received TEXT message");
             try {

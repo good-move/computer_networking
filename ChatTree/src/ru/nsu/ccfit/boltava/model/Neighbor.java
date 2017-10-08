@@ -23,8 +23,8 @@ public class Neighbor {
     private static final int QUEUE_SIZE = 500;
 
     private EventDispatcher<AckReceivedEvent> eventDispatcher;
-    private ExecutorService threadPool = Executors.newFixedThreadPool(MAX_THREADS_COUNT);
     private LinkedBlockingQueue<ExecutionPack> queue = new LinkedBlockingQueue<>(QUEUE_SIZE);
+    Thread worker;
 
     private final InetSocketAddress address;
     private final DatagramSocket socket;
@@ -34,12 +34,8 @@ public class Neighbor {
         this.socket = socket;
         this.address = address;
         this.eventDispatcher = dispatcher;
-
-//        MessageSender sender = new MessageSender();
-//        for (int i = 0; i < MAX_THREADS_COUNT; ++i) {
-//            threadPool.submit(new MessageSender());
-//        }
-        new Thread(new MessageSender(), "Neighbor").start();
+        worker = new Thread(new MessageSender(), "Neighbor");
+        worker.start();
     }
 
     /**
@@ -70,8 +66,8 @@ public class Neighbor {
     }
 
     public void detach() {
-        if (!threadPool.isShutdown()) {
-            threadPool.shutdown();
+        if (!worker.isInterrupted()) {
+            worker.interrupt();
         }
     }
 
@@ -117,19 +113,13 @@ public class Neighbor {
                     System.out.println("subscribing.");
                     eventDispatcher.subscribe(event, this);
                     sender.send(pack.getMessage(), address);
-                } catch (JAXBException | IOException | InterruptedException e) {
-                    e.printStackTrace();
-                    if (pack.getOnError() != null) {
-                        pack.getOnError().run();
-                    }
                 } catch (RobustMessageSender.SenderStoppedException e) {
                     System.out.println("trying to run onSuccess");
                     if (pack.getOnSuccess() != null) {
                         pack.getOnSuccess().run();
                     }
                 } catch (TimeoutException e) {
-                    System.out.println("trying to run onError");
-                    System.out.println(e.getMessage());
+                    System.err.println(e.getMessage());
                     if (pack.getOnError() != null) {
                         pack.getOnError().run();
                     }
@@ -137,6 +127,10 @@ public class Neighbor {
                 } catch (Exception e) {
                     e.printStackTrace();
                     System.err.println(e.getMessage());
+                    if (pack.getOnError() != null) {
+                        pack.getOnError().run();
+                    }
+                    pack.getFuture().cancel(true);
                 }
                 finally {
                     if (pack.onError == null &&
