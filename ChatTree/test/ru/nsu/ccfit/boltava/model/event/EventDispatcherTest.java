@@ -8,7 +8,7 @@ public class EventDispatcherTest {
     @Test
     public void checkPublishReaction() {
         HelloWorldListener listener = new HelloWorldListener();
-        EventDispatcher<HelloWorldEvent, IEventListener<HelloWorldEvent>> dispatcher =
+        EventDispatcher<HelloWorldEvent> dispatcher =
                 new EventDispatcher<>();
         HelloWorldEvent event = new HelloWorldEvent();
         dispatcher.subscribe(event, listener);
@@ -19,7 +19,7 @@ public class EventDispatcherTest {
 
     @Test
     void checkMultipleSubscribersReaction() {
-        EventDispatcher<HelloWorldEvent, IEventListener<HelloWorldEvent>> dispatcher =
+        EventDispatcher<HelloWorldEvent> dispatcher =
                 new EventDispatcher<>();
         HelloWorldEvent event = new HelloWorldEvent();
         dispatcher.subscribe(event, new ConsoleWriterListener("listener 1"));
