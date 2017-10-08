@@ -81,7 +81,7 @@ public final class Client implements IMessageListener {
     }
 
     public synchronized boolean isRoot() {
-        return node.getParent() == null;
+        return node.isRoot;
     }
 
     // ***************************** Message operation routines *****************************
@@ -159,6 +159,30 @@ public final class Client implements IMessageListener {
             cachedMessages.pollFirst();
         }
     }
+
+//    ***************************** Node modification methods *****************************
+
+    /**
+     * Removes parent connection for current node
+     */
+    public synchronized void detachParent() {
+        if (!isRoot()) {
+            Neighbor neighbor = node.getParent();
+            if (neighbor != null) {
+                neighbor.detach();
+            }
+            node.makeRoot();
+        }
+    }
+
+    public synchronized void setParent(InetSocketAddress address) throws IOException, JAXBException {
+        if (isRoot()) {
+            node.setParent(address);
+        }
+    }
+
+
+
 //    ***************************** Internal state manipulation routines *****************************
 
     /**
@@ -181,7 +205,6 @@ public final class Client implements IMessageListener {
             e.printStackTrace();
         }
     }
-
 
     /**
      * MessageListener is supposed to wait for a udp packet to arrive,
@@ -239,13 +262,20 @@ public final class Client implements IMessageListener {
 
     public final class Node {
 
+        private boolean isRoot = true;
         private final String nodeName;
         private Neighbor parent;
         private ConcurrentHashMap<InetSocketAddress, Neighbor> children = new ConcurrentHashMap<>();
 
+        Node(String nodeName) {
+            this.nodeName = nodeName;
+            isRoot = true;
+        }
+
         Node(String name, Neighbor parent) {
             this.nodeName = name;
             this.parent = parent;
+            isRoot = false;
         }
 
         public String getName() {
@@ -259,6 +289,9 @@ public final class Client implements IMessageListener {
          * @throws JAXBException
          */
         public void addChild(InetSocketAddress address) throws IOException, JAXBException {
+            if (!isRoot && parent.getAddress().equals(address)) {
+                throw new IllegalArgumentException("Cannot assign parent to be a child");
+            }
             children.put(address, new Neighbor(socket, address));
         }
 
@@ -278,15 +311,20 @@ public final class Client implements IMessageListener {
             return children.get(address);
         }
 
-        public void setParent(Neighbor parent) {
-            if (children.containsKey(parent.getAddress())) {
+        private void setParent(InetSocketAddress address) throws IOException, JAXBException {
+            if (children.containsKey(address)) {
                 throw new IllegalArgumentException("Cannot assign a child to be the parent");
             }
-            this.parent = parent;
+            this.parent = new Neighbor(socket, address);
+            isRoot = false;
+        }
+
+        private void makeRoot() {
+            isRoot = true;
         }
 
         public Neighbor getParent() {
-            return parent;
+            return isRoot ? null : parent;
         }
 
         public ArrayList<Neighbor> getChildren() {
@@ -295,7 +333,9 @@ public final class Client implements IMessageListener {
 
         public ArrayList<Neighbor> getNeighbors() {
             ArrayList<Neighbor> neighbors = getChildren();
-            neighbors.add(parent);
+            if (!isRoot) {
+                neighbors.add(parent);
+            }
             return neighbors;
         }
 
