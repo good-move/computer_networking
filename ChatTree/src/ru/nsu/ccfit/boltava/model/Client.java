@@ -14,6 +14,7 @@ import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Random;
 import java.util.TreeSet;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -28,7 +29,7 @@ public final class Client implements IMessageListener {
     private State state;
     private Node node;
     private final DatagramSocket socket;
-    private final int packetLossFactor;
+//    private final int packetLossFactor;
     private HashSet<IMessageRenderer> renderers = new HashSet<>();
     private TreeSet<CacheEntry> cachedMessages = new TreeSet<>();
 
@@ -46,8 +47,10 @@ public final class Client implements IMessageListener {
         this.socket = new DatagramSocket(port);
         Neighbor parent = (parentAddress == null) ? null : new Neighbor(this.socket, parentAddress, eventDispatcher);
         this.node =  parentAddress == null ? new Node(nodeName) : new Node(nodeName, parent);
-        this.packetLossFactor = packetLossFactor;
-        messageListener = new Thread(new Client.MessageListener(socket, new MessageHandler(this, eventDispatcher)));
+        messageListener = new Thread(
+                new MessageListener(socket, new MessageHandler(this, eventDispatcher), packetLossFactor),
+                "Message Listener"
+        );
         messageListener.start();
         if (!isRoot()) {
             state = State.JOINING;
@@ -131,7 +134,7 @@ public final class Client implements IMessageListener {
     public void onTextMessageEntered(String message) {
         try {
             if (this.state == State.RUNNING) {
-                System.out.println("will broadcast message: " + message);
+//                System.out.println("will broadcast message: " + message);
                 broadcastMessage(new TextMessage(message, node.getName()));
             }
         } catch (InterruptedException e) {
@@ -146,7 +149,7 @@ public final class Client implements IMessageListener {
             if (cachedMessages.size() == cacheSize) {
                 cleanCache(cacheSize / 10);
             }
-            System.out.println("ADDED CACHE ENTRY");
+//            System.out.println("ADDED CACHE ENTRY");
             cachedMessages.add(entry);
         }
     }
@@ -310,10 +313,13 @@ public final class Client implements IMessageListener {
 
         MessageHandler handler;
         DatagramMessageReceiver receiver;
+        private final int packetLossFactor;
+        private final Random randGenerator = new Random();
 
-        MessageListener(DatagramSocket socket, MessageHandler handler) throws JAXBException {
+        MessageListener(DatagramSocket socket, MessageHandler handler, int packetLossFactor) throws JAXBException {
             this.handler = handler;
             receiver = new DatagramMessageReceiver(socket, new XmlMessageSerializer());
+            this.packetLossFactor = packetLossFactor;
         }
 
         @Override
@@ -333,8 +339,7 @@ public final class Client implements IMessageListener {
         }
 
         private boolean isPacketLost() {
-            return false;
-//            return new Random().nextInt() % 100 <= mPacketLossFactor;
+            return randGenerator.nextInt(100) <= packetLossFactor;
         }
 
     }

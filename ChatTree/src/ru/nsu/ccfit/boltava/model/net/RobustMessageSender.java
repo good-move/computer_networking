@@ -61,7 +61,6 @@ public class RobustMessageSender {
             stopped = false;
             long startTime = System.currentTimeMillis();
             while (!stopped && System.currentTimeMillis() - startTime < timeout) {
-                System.out.println("sending message ..");
                 sender.send(message, receiver);
                 lock.wait(WAIT_INTERVAL);
             }
