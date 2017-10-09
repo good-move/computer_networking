@@ -67,6 +67,7 @@ public class Neighbor {
     public void detach() {
         if (!worker.isInterrupted()) {
             worker.interrupt();
+            queue.clear();
         }
     }
 

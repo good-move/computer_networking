@@ -301,7 +301,7 @@ public final class Client implements IMessageListener {
 
     /**
      * MessageListener is supposed to wait for a udp packet to arrive,
-     * registerMessage it as "received" and delegate it to an IMessageHandler
+     * registerMessage as "received" and delegate it to an IMessageHandler
      * to process.
      *
      * NOTE: before passing the serializer over to an IMessageHandler, listener
