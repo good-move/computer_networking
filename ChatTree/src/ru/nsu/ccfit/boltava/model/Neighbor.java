@@ -19,7 +19,6 @@ import java.util.concurrent.*;
  */
 public class Neighbor {
 
-    private static final int MAX_THREADS_COUNT = 1;
     private static final int QUEUE_SIZE = 500;
 
     private EventDispatcher<AckReceivedEvent> eventDispatcher;
@@ -68,6 +67,7 @@ public class Neighbor {
     public void detach() {
         if (!worker.isInterrupted()) {
             worker.interrupt();
+            queue.clear();
         }
     }
 
@@ -81,7 +81,7 @@ public class Neighbor {
         CompletableFuture<Message> future = new CompletableFuture<>();
 
         queue.put(new ExecutionPack(message, onSuccess, onError, onAny, future));
-        System.out.println("OFFERED MESSAGE");
+//        System.out.println("OFFERED MESSAGE");
 
         return future;
     }
@@ -110,11 +110,11 @@ public class Neighbor {
                         address, pack.getMessage().getId()
                 );
                 try {
-                    System.out.println("subscribing.");
+//                    System.out.println("subscribing.");
                     eventDispatcher.subscribe(event, this);
                     sender.send(pack.getMessage(), address);
                 } catch (RobustMessageSender.SenderStoppedException e) {
-                    System.out.println("trying to run onSuccess");
+//                    System.out.println("trying to run onSuccess");
                     if (pack.getOnSuccess() != null) {
                         pack.getOnSuccess().run();
                     }
@@ -138,7 +138,7 @@ public class Neighbor {
                         pack.onResult != null) {
                         pack.onResult.run();
                     }
-                    System.out.println("unsubscribing.");
+//                    System.out.println("unsubscribing.");
                     pack.getFuture().complete(pack.getMessage());
                     eventDispatcher.unsubscribe(event, this);
                 }

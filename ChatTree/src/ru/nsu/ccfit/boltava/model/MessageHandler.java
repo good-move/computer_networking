@@ -21,7 +21,7 @@ public class MessageHandler implements IMessageHandler {
 
     @Override
     public void handle(AckMessage message) {
-        System.out.println("Received ACK message");
+//        System.out.println("Received ACK message");
         // should publish ACK event
         eventDispatcher.publish(new AckReceivedEvent(message.getSender(), message.getId()));
     }
