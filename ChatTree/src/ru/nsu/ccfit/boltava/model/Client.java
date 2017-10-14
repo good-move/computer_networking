@@ -58,7 +58,6 @@ public final class Client implements IMessageListener {
         } else {
             state = State.RUNNING;
         }
-
         setShutDownHook();
     }
 
@@ -204,11 +203,13 @@ public final class Client implements IMessageListener {
                         System.out.println("Joined parent!");
                         this.state = State.RUNNING;
                     }, () -> {
+                        node.isRoot = true;
                         this.state = State.TERMINATED;
+//                        node.isRoot = true;
                         System.out.println("Failed to connect to parent");
                         messageListener.interrupt();
-                        node.getParent().detach();
-                    }
+                        node.parent.detach();
+                        }
                 );
         } catch (InterruptedException e) {
             e.printStackTrace();

@@ -40,7 +40,6 @@ public class MessageHandler implements IMessageHandler {
                 client.registerMessage(message);
                 System.out.println(message.getNodeName() + " has joined chat");
                 client.getNode().addChild(message.getSender());
-                System.out.println("Sending AckJoin to " + message.getNodeName());
                 client.sendTo(new AckMessage(message.getId()), message.getSender());
             } catch (IOException | JAXBException | InterruptedException e) {
                 e.printStackTrace();

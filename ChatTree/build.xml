@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="ChatTree" default="all">
+
+    <property name="ChatTree.output.dir" value="./out" />
+
+    <property name="ChatTree.jar.output.dir" value="./" />
+    <property name="ChatTree.jar.output.name" value="ChatTree.jar" />
+
+
+    <patternset id="library.patterns">
+        <include name="*.war"/>
+        <include name="*.swc"/>
+        <include name="*.zip"/>
+        <include name="*.ear"/>
+        <include name="*.egg"/>
+        <include name="*.ane"/>
+        <include name="*.jar"/>
+    </patternset>
+
+    <path id="library.lib.classpath">
+        <fileset dir="${basedir}/lib">
+            <patternset refid="library.patterns"/>
+        </fileset>
+        <pathelement location="${basedir}" />
+    </path>
+
+
+    <target name="all" />
+
+    <target name="jar">
+        <mkdir dir="." />
+        <manifestclasspath property="manifest.classpath" jarfile="${ChatTree.jar.output.dir}/${ChatTree.jar.output.name}">
+            <classpath refid="library.lib.classpath"/>
+        </manifestclasspath>
+        <jar basedir="${ChatTree.output.dir}/production" destfile="${ChatTree.jar.output.dir}/${ChatTree.jar.output.name}">
+            <manifest>
+                <attribute name="Main-Class" value="ru.nsu.ccfit.boltava.model.ChatTree"/>
+                <attribute name="Class-Path" value="${manifest.classpath}"/>
+            </manifest>
+        </jar>
+    </target>
+
+</project>

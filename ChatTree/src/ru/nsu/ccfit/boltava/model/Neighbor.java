@@ -4,13 +4,16 @@ import ru.nsu.ccfit.boltava.model.event.EventDispatcher;
 import ru.nsu.ccfit.boltava.model.event.IEventListener;
 import ru.nsu.ccfit.boltava.model.event.AckReceivedEvent;
 import ru.nsu.ccfit.boltava.model.message.Message;
-import ru.nsu.ccfit.boltava.model.net.RobustMessageSender;
+import ru.nsu.ccfit.boltava.model.net.DatagramMessageSender;
 import ru.nsu.ccfit.boltava.model.serializer.XmlMessageSerializer;
 
 import javax.xml.bind.JAXBException;
 import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
+import java.util.HashSet;
+import java.util.Queue;
+import java.util.UUID;
 import java.util.concurrent.*;
 
 /**
@@ -23,7 +26,7 @@ public class Neighbor {
 
     private EventDispatcher<AckReceivedEvent> eventDispatcher;
     private LinkedBlockingQueue<ExecutionPack> queue = new LinkedBlockingQueue<>(QUEUE_SIZE);
-    Thread worker;
+    private Thread worker;
 
     private final InetSocketAddress address;
     private final DatagramSocket socket;
@@ -88,68 +91,108 @@ public class Neighbor {
 
     private final class MessageSender implements Runnable, IEventListener<AckReceivedEvent> {
 
-        private RobustMessageSender sender;
+        private DatagramMessageSender sender;
+        private HashSet<UUID> deliveredMessages = new HashSet<>();
+        private LinkedBlockingQueue<ExecutionPack> pendingMessages = new LinkedBlockingQueue<>();
+        private final long DELIVERY_INTERVAL = 100;
+        private final long MAX_TTL = 5;
+        private final long INFINITY = 0;
 
         MessageSender() throws IOException, JAXBException {
-            sender = new RobustMessageSender(socket, new XmlMessageSerializer());
+            sender = new DatagramMessageSender(socket, new XmlMessageSerializer());
         }
 
         @Override
         public void run() {
             while (!Thread.interrupted()) {
                 ExecutionPack pack;
-                try {
+                if (pendingMessages.isEmpty()) {
+//                    System.out.println("waiting for new incoming INF");
+                    waitForIncoming(INFINITY);
+                } else {
+                    pack = pendingMessages.peek();
+                    long diff = System.currentTimeMillis() - pack.sendTime + 1;
+                    if (deliveredMessages.contains(pack.message.getId()) ||
+                        pack.ttl >= MAX_TTL) {
+                        pendingMessages.poll();
+                        deliveredMessages.remove(pack.message.getId());
+                        eventDispatcher.unsubscribe(
+                            new AckReceivedEvent(address, pack.getMessage().getId()),
+                            this
+                        );
+                        if (pack.ttl >= MAX_TTL) {
+//                            System.out.println("trying to run onError");
+                            if (pack.onError != null) pack.onError.run();
+                            else if (pack.onResult != null) pack.onResult.run();
+                            pack.future.cancel(true);
+                        } else {
+//                            System.out.println("trying to run onSuccess");
+                            if (pack.onSuccess != null) pack.onSuccess.run();
+                            else if (pack.onResult != null) pack.onResult.run();
+                            pack.future.complete(pack.getMessage());
+                        }
+                    } else if (diff > DELIVERY_INTERVAL) {
+                        pendingMessages.poll();
+                        this.sendMessage(pack);
+                    } else {
+//                        System.out.println("waiting for incoming DIFF");
+                        try {
+                            pack = queue.poll(diff, TimeUnit.MILLISECONDS);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                        if (pack == null) continue;
+                        eventDispatcher.subscribe(
+                                new AckReceivedEvent(address, pack.getMessage().getId()),
+                                this
+                        );
+                        this.sendMessage(pack);
+                    }
+                }
+            }
+        }
+
+        private void waitForIncoming(long timeoutMillis) {
+            ExecutionPack pack;
+            try {
+                if (timeoutMillis != INFINITY) {
+                    pack = queue.poll(timeoutMillis, TimeUnit.MILLISECONDS);
+                } else {
                     pack = queue.take();
-                    System.out.println("Sending new message to neighbor ");
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                    break;
                 }
-
-                AckReceivedEvent event = new AckReceivedEvent(
-                        address, pack.getMessage().getId()
+                if (pack == null) return;
+                eventDispatcher.subscribe(
+                    new AckReceivedEvent(address, pack.getMessage().getId()),
+                    this
                 );
-                try {
-//                    System.out.println("subscribing.");
-                    eventDispatcher.subscribe(event, this);
-                    sender.send(pack.getMessage(), address);
-                } catch (RobustMessageSender.SenderStoppedException e) {
-//                    System.out.println("trying to run onSuccess");
-                    if (pack.getOnSuccess() != null) {
-                        pack.getOnSuccess().run();
-                    }
-                } catch (TimeoutException e) {
-                    System.err.println(e.getMessage());
-                    if (pack.getOnError() != null) {
-                        pack.getOnError().run();
-                    }
-                    pack.getFuture().cancel(true);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    System.err.println(e.getMessage());
-                    if (pack.getOnError() != null) {
-                        pack.getOnError().run();
-                    }
-                    pack.getFuture().cancel(true);
-                }
-                finally {
-                    if (pack.onError == null &&
-                        pack.onSuccess == null &&
-                        pack.onResult != null) {
-                        pack.onResult.run();
-                    }
-//                    System.out.println("unsubscribing.");
-                    pack.getFuture().complete(pack.getMessage());
-                    eventDispatcher.unsubscribe(event, this);
-                }
+                this.sendMessage(pack);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                System.err.println("Failed to fetch message from queue");
+            }
+        }
 
+        private void sendMessage(ExecutionPack pack) {
+            try {
+//                System.out.println("Sending message");
+                sender.send(pack.getMessage(), address);
+                pack.sendTime = System.currentTimeMillis();
+                pack.ttl++;
+                pendingMessages.put(pack);
+            } catch (IOException | JAXBException e) {
+                e.printStackTrace();
+                System.err.println(
+                    "Failed to send message of type " + pack.getMessage().getClass().getSimpleName()
+                );
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
 
         @Override
         public void act(AckReceivedEvent event) {
             System.out.println("Received ACK from " + address);
-            sender.cancel();
+            deliveredMessages.add(event.getMessageId());
         }
 
     }
@@ -161,6 +204,8 @@ public class Neighbor {
         private final Runnable onError;
         private final Runnable onResult;
         private final CompletableFuture<Message> future;
+        private long sendTime;
+        private int ttl = 0;
 
         ExecutionPack(Message message,
                       Runnable onSuccess,
@@ -187,6 +232,14 @@ public class Neighbor {
 
         public CompletableFuture<Message> getFuture() {
             return future;
+        }
+
+        public long getSendTime() {
+            return sendTime;
+        }
+
+        public void setSendTime(long sendTime) {
+            this.sendTime = sendTime;
         }
     }
 
