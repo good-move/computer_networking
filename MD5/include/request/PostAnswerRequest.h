@@ -30,6 +30,7 @@ struct PostAnswerRequest : public Request {
       return json.dump();
     }
 
+    // TODO: Add check for missing fields
     virtual void FromJson(const std::string& jsonString) override {
       nlohmann::json json = nlohmann::json::parse(jsonString);
       this->uuid = json.at("uuid").get<std::string>();

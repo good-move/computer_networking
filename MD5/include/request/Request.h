@@ -48,14 +48,14 @@ protected:
  */
 template <class T>
 void to_json(const nlohmann::json& j, T& t) {
-  static_assert(std::is_base_of<JsonSerializable, T>::value, "T must extend list");
-  t.ToJson(j);
+  static_assert(std::is_base_of<JsonSerializable, T>::value, "JsonSerializable");
+  j = nlohmann::json::parse(t.ToJson());
 }
 
 template <class T>
 void from_json(const nlohmann::json& j, T& t) {
-  static_assert(std::is_base_of<JsonSerializable, T>::value, "T must extend list");
-  t.FromJson(j);
+  static_assert(std::is_base_of<JsonSerializable, T>::value, "T must extend JsonSerializable");
+  t.FromJson(j.dump());
 }
 
 
