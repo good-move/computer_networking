@@ -6,6 +6,9 @@
 
 using namespace std;
 
+const std::string TcpSocket::LOCALHOST = "127.0.0.1";
+
+
 TcpSocket::
 TcpSocket(const string& address, const unsigned short port)
         : socketAddress_(address, port) {
@@ -42,10 +45,10 @@ int
 TcpSocket::
 Bind() {
   int result = bind(socketDescriptor, (sockaddr*)socketAddress_.GetRawAddress(), sizeof(sockaddr_in));
+
   if (result == ERROR) {
     const string errorMsg = "Failed to bind socket";
     perror(errorMsg.c_str());
-    Close();
     throw runtime_error(errorMsg);
   }
   return SUCCESS;

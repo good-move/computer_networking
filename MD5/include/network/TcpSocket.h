@@ -42,6 +42,10 @@ class TcpSocket {
     int GetDescriptor() const;
     InetSocketAddress GetAddress() const;
 
+
+    static const std::string LOCALHOST;
+    static const int NO_FLAGS = 0;
+
   private:
     TcpSocket(const int descriptor, const sockaddr_in* address);
 
