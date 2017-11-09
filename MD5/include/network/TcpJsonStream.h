@@ -38,7 +38,7 @@ class TcpJsonStream {
       socket.Receive(&messageSize, sizeof(ssize_t), TcpSocket::NO_FLAGS);
 
       if (messageSize < 0) {
-        throw std::runtime_error("Message length cannot be a negative number");
+        throw std::runtime_error("Failed to receive message: message length cannot be a negative number");
       }
 
       char* jsonStringBuffer = new char[messageSize];
@@ -48,14 +48,19 @@ class TcpJsonStream {
 
       const nlohmann::json json = nlohmann::json::parse(jsonString);
 
-      if (json.count("success") > 0) {
+      if (json.count("status") == 0) {
+        throw std::runtime_error("Failed to parse JSON: cannot figure out response type (no status field was found)");
+      }
+
+      std::string responseStatus = json.at("status");
+      if (responseStatus == "success") {
         response = new SuccessType();
         response->FromJson(jsonString);
-      } else if (json.count("error")) {
+      } else if (responseStatus == "error") {
         response = new ErrorType();
         response->FromJson(jsonString);
       } else {
-        throw std::runtime_error("Failed to parse JSON: none of expected tags has been found");
+        throw std::runtime_error("Failed to parse JSON: unknown status type");
       }
     }
 
