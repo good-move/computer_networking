@@ -34,6 +34,13 @@ struct ErrorResponse : public Response {
       this->status = ResponseStatus::ERROR;
     };
 
+    enum ErrorCode {
+        MISSING_UUID,
+        UNRECOGNIZED_UUID,
+        OUT_OF_RANGES,
+        WRONG_ANSWER
+    };
+
 };
 
 #endif //MD5_ERRORRESPONSE_H
