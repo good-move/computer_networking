@@ -15,8 +15,17 @@ class PostAnswerResponse : public Response {
       handler(*this);
     }
 
-    virtual std::string ToJson() const override { return ""; };
-    virtual void FromJson(const std::string& json) override {};
+    virtual std::string ToJson() const override {
+      nlohmann::json json = {
+          { "status", "success" }
+      };
+      return json.dump();
+    };
+
+    virtual void FromJson(const std::string& json) override {
+      this->status = ResponseStatus::SUCCESS;
+    };
+
 };
 
 

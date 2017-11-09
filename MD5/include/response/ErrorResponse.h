@@ -18,8 +18,21 @@ struct ErrorResponse : public Response {
       handler(*this);
     }
 
-    virtual std::string ToJson() const override { return ""; };
-    virtual void FromJson(const std::string& json) override {};
+    virtual std::string ToJson() const override {
+      nlohmann::json json = {
+          { "status", "error" },
+          { "code", errorCode },
+          { "message", errorMessage }
+      };
+      return json.dump();
+    };
+
+    virtual void FromJson(const std::string& json) override {
+      nlohmann::json j = nlohmann::json::parse(json);
+      errorCode = j.at("code");
+      errorMessage = j.at("message");
+      this->status = ResponseStatus::ERROR;
+    };
 
 };
 
