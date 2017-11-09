@@ -32,14 +32,20 @@ class Client : public ResponseHandler {
      * md5 hash to crack and client uuid
      */
     void Register();
-    void GetAttackRange();
-    void StartAttack();
+    void FetchNextAttackRange();
+    bool FindHashOrigin();
+    void SendAnswer();
 
 
-    virtual void operator()(const ErrorResponse& errorResponse) {};
-    virtual void operator()(const RegisterResponse& errorResponse) {};
-    virtual void operator()(const GetRangeResponse& errorResponse) {};
-    virtual void operator()(const PostAnswerResponse& errorResponse) {};
+    bool IsRunning();
+    bool HashOriginFound();
+    std::string GetAnswer();
+
+
+    virtual void operator()(const ErrorResponse& error);
+    virtual void operator()(const RegisterResponse& response);
+    virtual void operator()(const GetRangeResponse& response);
+    virtual void operator()(const PostAnswerResponse& response);
 
   private:
 
@@ -47,10 +53,14 @@ class Client : public ResponseHandler {
     std::unique_ptr<TcpSocket> socket = nullptr;
     std::unique_ptr<InetSocketAddress> serverAddress = nullptr;
     std::unique_ptr<Md5Cracker> md5Cracker = nullptr;
+
     std::string uuid;
     std::string targetHash;
+    std::string hashOrigin;
 
-    static const unsigned short DEFAULT_SOCKET_PORT = 49000;
+    bool isRunning = true;
+    bool hashOriginFound = false;
+
 };
 
 
