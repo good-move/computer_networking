@@ -2,8 +2,11 @@
 #include "include/PermutationGenerator.h"
 #include "include/Md5Cracker.h"
 #include "include/request/PostAnswerRequest.h"
+#include "include/network/TcpSocket.h"
+#include "include/Client.h"
 
 #include <bits/unique_ptr.h>
+#include <iostream>
 
 using namespace std;
 
@@ -11,32 +14,29 @@ const vector<char> DEFAULT_ALPHABET = {'A', 'C', 'G', 'T'};
 
 int main()
 {
-  /*
-   * Create all auxiliary objects
-   * Connect to server and request brute force range
-   * Brute force
-   * get result
-   */
+  Client client(4000, TcpSocket::LOCALHOST, 3000);
+  unique_ptr<PermutationGenerator> permGen(new PermutationGenerator(DEFAULT_ALPHABET));
+  client.InitMd5Cracker(permGen.get());
+  client.Register();
+  return 0;
 
-//#define __A
-
-#ifdef __A
-  unique_ptr<PermutationGenerator> permGenPtr{new PermutationGenerator(DEFAULT_ALPHABET)};
-  Md5Cracker cracker(permGenPtr.get(), "ff9c072d42a94d0a5112613019b54eae");
-  cracker.SetRange("AA", "AAA");
-  cracker.Crack();
-  if (cracker.MatchFound()) {
-    cout << "Hash cracked! Target string: " << cracker.GetHashOrigin() << endl;
-  } else {
-    cout << "No match found" << endl;
+  while (client.IsRunning()) {
+    client.FetchNextAttackRange();
+    client.FindHashOrigin();
   }
 
-#endif
-
-  PostAnswerRequest request{"123", "AACG"};
-  string json = request.ToJson();
-
-  cout << json << endl;
+  if (client.HashOriginFound()) {
+    cout << "Answer found: " << client.GetAnswer() << endl;
+    try {
+      client.SendAnswer();
+    } catch (const runtime_error& e) {
+      cerr << "Error while sending answer to server" << endl;
+      cerr << e.what() << endl;
+    }
+    cerr << "Shutting down." << endl;
+  } {
+    cerr << "Shutting down with no answer found." << endl;
+  }
 
   return 0;
 }
