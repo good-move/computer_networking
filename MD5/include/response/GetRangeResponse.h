@@ -8,7 +8,7 @@
 #include "Response.h"
 #include "../ResponseHandler.h"
 
-class GetRangeResponse : public Response {
+struct GetRangeResponse : public Response {
 
     virtual void handle(ResponseHandler& handler) const override {
       handler(*this);

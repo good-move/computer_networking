@@ -9,7 +9,7 @@
 #include "../ResponseHandler.h"
 #include "Response.h"
 
-class PostAnswerResponse : public Response {
+struct PostAnswerResponse : public Response {
 
     virtual void handle(ResponseHandler& handler) const override {
       handler(*this);
