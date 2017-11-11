@@ -12,13 +12,16 @@ using namespace std;
 
 const vector<char> DEFAULT_ALPHABET = {'A', 'C', 'G', 'T'};
 
+const int CLIENT_PORT = 3000;
+const int SERVER_PORT = 5000;
+
+
 int main()
 {
-  Client client(4000, TcpSocket::LOCALHOST, 3000);
+  Client client(CLIENT_PORT, TcpSocket::LOCALHOST, SERVER_PORT);
   unique_ptr<PermutationGenerator> permGen(new PermutationGenerator(DEFAULT_ALPHABET));
   client.InitMd5Cracker(permGen.get());
   client.Register();
-  return 0;
 
   while (client.IsRunning()) {
     client.FetchNextAttackRange();
