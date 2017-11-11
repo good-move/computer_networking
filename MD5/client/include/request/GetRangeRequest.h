@@ -21,7 +21,7 @@ struct GetRangeRequest : public Request {
 
     virtual std::string ToJson() const override {
       nlohmann::json json = {
-              { "requestCode", this->GetCode() },
+              { "code", this->GetCode() },
               { "uuid",  this->uuid }
       };
 

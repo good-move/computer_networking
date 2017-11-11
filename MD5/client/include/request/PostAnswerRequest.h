@@ -22,7 +22,7 @@ struct PostAnswerRequest : public Request {
 
     virtual std::string ToJson() const override {
       nlohmann::json json = {
-              { "requestCode", this->GetCode() },
+              { "code", this->GetCode() },
               { "uuid",  this->uuid },
               { "answer", this->answer }
       };

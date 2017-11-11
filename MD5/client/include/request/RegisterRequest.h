@@ -18,7 +18,7 @@ struct RegisterRequest : public Request {
 
     virtual std::string ToJson() const override {
       nlohmann::json json = {
-              { "requestCode", this->GetCode() }
+              { "code", this->GetCode() }
       };
 
       return json.dump();
