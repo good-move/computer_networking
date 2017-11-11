@@ -83,28 +83,6 @@ ConnectToRemote(const InetSocketAddress &remoteAddress) const {
   return SUCCESS;
 }
 
-int
-TcpSocket::
-Listen() const {
-  int result = listen(socketDescriptor, 1);
-  if (result == ERROR) {
-    perror("Failed to turn the socket into listening mode");
-    return result;
-  }
-  return SUCCESS;
-}
-
-TcpSocket
-TcpSocket::
-Accept() const {
-  sockaddr_in rawAddress;
-  socklen_t socketStructSize = sizeof(sockaddr_in);
-  int descriptor = accept(socketDescriptor, (sockaddr*)&rawAddress, &socketStructSize);
-
-  TcpSocket socket(descriptor, &rawAddress);
-  return socket;
-}
-
 ssize_t
 TcpSocket::
 Send(const void* buffer, size_t bufferSize, int flags) const {
