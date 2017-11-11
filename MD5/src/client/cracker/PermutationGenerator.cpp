@@ -3,7 +3,7 @@
 //
 
 #include <stdexcept>
-#include "../../include/PermutationGenerator.h"
+#include "../../../include/PermutationGenerator.h"
 
 using namespace std;
 
