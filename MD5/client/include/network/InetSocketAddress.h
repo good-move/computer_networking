@@ -38,7 +38,7 @@ class InetSocketAddress {
 
     InetSocketAddress(const sockaddr_in* rawAddress) {
       if (rawAddress == nullptr) throw std::runtime_error("rawAddress cannot be NULL");
-      InitSocketAddress(rawAddress->sin_addr.s_addr, rawAddress->sin_port);
+      InitSocketAddress(rawAddress->sin_addr.s_addr, ntohs(rawAddress->sin_port));
     }
 
     const sockaddr_in* GetRawAddress() const {
@@ -50,7 +50,7 @@ class InetSocketAddress {
     }
 
     unsigned short GetPort() const {
-      return (address.sin_port);
+      return ntohs(address.sin_port);
     }
 
 private:
@@ -58,7 +58,7 @@ private:
     void InitSocketAddress(in_addr_t address, const unsigned short port) {
       memset(&this->address, 0, GetRawSize());
       this->address.sin_family = AF_INET;
-      this->address.sin_port = port;
+      this->address.sin_port = htons(port);
       this->address.sin_addr.s_addr = address;
     }
 

@@ -9,7 +9,7 @@ std::string to_string(const InetSocketAddress& address) {
   }
 
   std::stringstream ss;
-  ss << "(" << stringAddress << ", " << addr_in->sin_port << ")";
+  ss << "(" << stringAddress << ", " << address.GetPort() << ")";
   return ss.str();
 }
 

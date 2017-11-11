@@ -92,7 +92,7 @@ GetDescriptor() const {
 int
 ServerSocket::
 Listen() const {
-  int result = listen(socketDescriptor, 1);
+  int result = listen(socketDescriptor, 5);
   if (result == ERROR) {
     perror("Failed to turn the socket into listening mode");
     return result;
