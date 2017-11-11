@@ -5,7 +5,7 @@
 #ifndef MD5_JSONSERIALIZABLE_H
 #define MD5_JSONSERIALIZABLE_H
 
-#include "../lib/json.hpp"
+#include "json.hpp"
 
 
 /*

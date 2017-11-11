@@ -7,7 +7,7 @@
 
 
 #include "../JsonSerializable.h"
-#include "../network/TcpSocket.h"
+#include "TcpSocket.h"
 
 class TcpJsonStream {
 

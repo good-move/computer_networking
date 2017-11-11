@@ -1,12 +1,13 @@
 #include <iostream>
+
 #include "include/PermutationGenerator.h"
-#include "include/Md5Cracker.h"
-#include "include/request/PostAnswerRequest.h"
 #include "include/network/TcpSocket.h"
 #include "include/Client.h"
 
 #include <bits/unique_ptr.h>
 #include <iostream>
+#include <vector>
+
 
 using namespace std;
 
