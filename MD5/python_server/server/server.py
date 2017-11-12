@@ -53,7 +53,7 @@ class ConcurrentServer:
         trying to crack the hash, to their range start and end
         """
         self.ranges_for_client = dict()
-        
+
         """
         queue of (uuid: str, send_time: timestamp, active: bool) objects
         to track clients, which take too much time 
@@ -154,6 +154,8 @@ class ConcurrentServer:
             client_socket.close()
             return
 
+        self.__resolve_request(request)
+
         if self.__is_answer_found():
             response = ErrorResponseFactory.create(
                 ErrorCodes.OUT_OF_RANGES,
@@ -218,6 +220,8 @@ class ConcurrentServer:
     """
     def __handle_post_answer_request(self, client_socket: socket.socket, request: dict):
         is_schema_valid = self.__validate_schema_and_reply_on_error(client_socket, request)
+
+        self.__resolve_request(request)
 
         try:
             if not is_schema_valid:
@@ -327,3 +331,11 @@ class ConcurrentServer:
 
     def __generate_next_range(self) -> Range:
         return Range("", "AAA")
+
+    def __resolve_request(self, request: dict):
+        # TODO: set mutex
+        client_uuid = request.get(RequestSchema.uuid)
+        range_record = self.ranges_for_client.get(client_uuid, None)
+        if range_record is not None:
+            entry = range_record[2]
+            entry.resolved = True
