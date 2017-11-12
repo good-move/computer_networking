@@ -1,6 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from hashlib import md5
 import collections
+import threading
 import socket
 import uuid
 
@@ -23,6 +24,14 @@ class QueueEntry:
         self.send_time = send_time
 
 
+def synchronized(method):
+    def internal_method(self, *arg, **kwargs):
+        with self.lock:
+            return method(self, *arg, **kwargs)
+
+    return internal_method
+
+
 class ConcurrentServer:
 
     TIMEOUT = 3
@@ -32,6 +41,7 @@ class ConcurrentServer:
     def __init__(self, target_hash: str, host: str, port: int):
         self.thread_pool = ThreadPoolExecutor(ConcurrentServer.THREADS_COUNT)
         self.hash = target_hash
+        self.lock = threading.RLock()
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -208,6 +218,7 @@ class ConcurrentServer:
             client_socket,
             SuccessResponseFactory.create_get_range_response(free_range.start, free_range.end)
         )
+        client_socket.close()
 
     """
         Checks if the so-called answer really is the answer, checks for
@@ -265,25 +276,25 @@ class ConcurrentServer:
         )
         self.tcp_json_stream.send_message(client_socket, error)
 
+    @synchronized
     def __has_uuid(self, request: dict):
-        # TODO: set mutex
         return RequestSchema.uuid in request
 
+    @synchronized
     def __register_client(self, uuid: str):
-        # TODO: set mutex
         self.registered_clients.add(uuid)
 
+    @synchronized
     def __is_uuid_registered(self, uuid: str):
-        # TODO: set mutex
         return uuid in self.registered_clients
 
+    @synchronized
     def __set_answer(self, answer: str):
-        # TODO: set mutex
         self.answer = answer
         self.answer_found = True
 
+    @synchronized
     def __validate_schema_and_reply_on_error(self, client_socket: socket.socket, request: dict):
-        # TODO: set mutex
         # check for uuid presence
         if not self.__has_uuid(request):
             self.tcp_json_stream.send_message(
@@ -308,8 +319,8 @@ class ConcurrentServer:
 
         return True
 
+    @synchronized
     def __is_answer_found(self):
-        # TODO: set mutex
         return self.answer_found
 
     def __is_answer_correct(self, answer: str):
@@ -317,8 +328,8 @@ class ConcurrentServer:
                self.hash == md5(answer).hexdigest() and \
                len(answer) <= ConcurrentServer.MAX_ANSWER_LENGTH
 
+    @synchronized
     def __get_overdue_entry(self) -> QueueEntry:
-        # TODO: set mutex
         if len(self.sent_responses) == 0:
             return None
 
@@ -332,8 +343,8 @@ class ConcurrentServer:
     def __generate_next_range(self) -> Range:
         return Range("", "AAA")
 
+    @synchronized
     def __resolve_request(self, request: dict):
-        # TODO: set mutex
         client_uuid = request.get(RequestSchema.uuid)
         range_record = self.ranges_for_client.get(client_uuid, None)
         if range_record is not None:
