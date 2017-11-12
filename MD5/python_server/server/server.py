@@ -4,7 +4,6 @@ import collections
 import threading
 import socket
 import uuid
-
 import time
 
 from server.tcp_json_stream import TcpJsonStream
@@ -42,6 +41,7 @@ class ConcurrentServer:
         self.thread_pool = ThreadPoolExecutor(ConcurrentServer.THREADS_COUNT)
         self.hash = target_hash
         self.lock = threading.RLock()
+        self.shutdown_thread = None
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -79,12 +79,10 @@ class ConcurrentServer:
             self.thread_pool.submit(self.__handle_request, client_socket)
         print("Server: Finishing work...")
 
-    def close(self):
+    def shutdown(self):
         # TODO: complete function
-        self.is_running = False
-        self.thread_pool.shutdown()
-        self.socket.close()
-        pass
+        self.__release_all_clients()
+        self.__close()
 
     def __handle_request(self, client_socket: socket.socket):
         try:
@@ -249,9 +247,11 @@ class ConcurrentServer:
                 return
 
             if self.__is_answer_correct(answer):
+                if not self.__is_answer_found():
+                    self.__set_answer(answer)
+                    self.__init_shutdown()
                 response = SuccessResponseFactory.create_post_answer_response()
                 self.tcp_json_stream.send_message(client_socket, response)
-                self.__set_answer(answer)
             else:
                 error = ErrorResponseFactory.create(ErrorCodes.WRONG_ANSWER, "Wrong answer: " + answer)
                 self.tcp_json_stream.send_message(client_socket, error)
@@ -325,8 +325,8 @@ class ConcurrentServer:
 
     def __is_answer_correct(self, answer: str):
         return answer is not None and \
-               self.hash == md5(answer).hexdigest() and \
-               len(answer) <= ConcurrentServer.MAX_ANSWER_LENGTH
+            self.hash == md5(answer).hexdigest() and \
+            len(answer) <= ConcurrentServer.MAX_ANSWER_LENGTH
 
     @synchronized
     def __get_overdue_entry(self) -> QueueEntry:
@@ -350,3 +350,29 @@ class ConcurrentServer:
         if range_record is not None:
             entry = range_record[2]
             entry.resolved = True
+
+    def __release_all_clients(self):
+        while len(self.sent_responses) > 0:
+            self.lock.acquire()
+            entry = self.sent_responses.popleft()
+            time_diff = time.time() - entry.send_time
+            if time_diff < ConcurrentServer.TIMEOUT:
+                self.sent_responses.appendleft(entry)
+                time_to_sleep = ConcurrentServer.TIMEOUT - time_diff
+                time.sleep(time_to_sleep)
+            else:
+                self.registered_clients.remove(entry.uuid)
+                del self.ranges_for_client[entry.uuid]
+            self.lock.release()
+
+    def __close(self):
+        self.is_running = False
+        self.thread_pool.shutdown()
+        self.sent_responses.clear()
+        self.ranges_for_client.clear()
+        self.registered_clients.clear()
+        self.socket.close()
+
+    def __init_shutdown(self):
+        self.shutdown_thread = threading.Thread(target=self.__close())
+        self.shutdown_thread.start()
