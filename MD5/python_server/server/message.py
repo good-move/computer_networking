@@ -60,3 +60,11 @@ class ErrorCodes:
     OUT_OF_RANGES = 2
     WRONG_ANSWER = 3
     UNKNOWN_REQUEST_CODE = 4
+    INVALID_MESSAGE_FORMAT = 5
+    INTERNAL_SERVER_ERROR = 6
+
+
+class RequestCodes:
+    REGISTER = 0
+    GET_RANGE = 1
+    POST_ANSWER = 2
