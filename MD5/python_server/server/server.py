@@ -6,6 +6,7 @@ import socket
 import uuid
 import time
 
+from server.permutation import PermutationGenerator
 from server.tcp_json_stream import TcpJsonStream
 from server.message import *
 
@@ -34,14 +35,19 @@ def synchronized(method):
 class ConcurrentServer:
 
     TIMEOUT = 3
+    RANGE_SIZE = 1000
     THREADS_COUNT = 5
     MAX_ANSWER_LENGTH = 30
+    DEFAULT_ALPHABET = 'ACGT'
 
     def __init__(self, target_hash: str, host: str, port: int):
         self.thread_pool = ThreadPoolExecutor(ConcurrentServer.THREADS_COUNT)
         self.hash = target_hash
+        self.perm_gen = PermutationGenerator(
+            ConcurrentServer.MAX_ANSWER_LENGTH, ConcurrentServer.DEFAULT_ALPHABET)
         self.lock = threading.RLock()
         self.shutdown_thread = None
+
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -80,7 +86,6 @@ class ConcurrentServer:
         print("Server: Finishing work...")
 
     def shutdown(self):
-        # TODO: complete function
         self.__release_all_clients()
         self.__close()
 
@@ -341,7 +346,11 @@ class ConcurrentServer:
             return None
 
     def __generate_next_range(self) -> Range:
-        return Range("", "AAA")
+        next_range = self.perm_gen.get_next_range(self.RANGE_SIZE)
+        if len(next_range) == 0:
+            return None
+        else:
+            return Range(next_range[0], next_range[1])
 
     @synchronized
     def __resolve_request(self, request: dict):
