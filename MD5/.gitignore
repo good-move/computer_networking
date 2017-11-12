@@ -1,3 +1,4 @@
 .idea
 *cmake*
 *CMake*
+**/__pycache__/**
