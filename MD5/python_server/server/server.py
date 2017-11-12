@@ -19,7 +19,7 @@ class Range:
 
 class QueueEntry:
     def __init__(self, client_uuid: str, send_time):
-        self.resolved = True
+        self.resolved = False
         self.uuid = client_uuid
         self.send_time = send_time
 
@@ -37,17 +37,17 @@ class ConcurrentServer:
     TIMEOUT = 3
     RANGE_SIZE = 1000
     THREADS_COUNT = 5
-    MAX_ANSWER_LENGTH = 30
+    MAX_ANSWER_LENGTH = 2
     DEFAULT_ALPHABET = 'ACGT'
 
     def __init__(self, target_hash: str, host: str, port: int):
+        self.address = (host, port)
         self.thread_pool = ThreadPoolExecutor(ConcurrentServer.THREADS_COUNT)
         self.hash = target_hash
         self.perm_gen = PermutationGenerator(
             ConcurrentServer.MAX_ANSWER_LENGTH, ConcurrentServer.DEFAULT_ALPHABET)
         self.lock = threading.RLock()
         self.shutdown_thread = None
-
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -60,6 +60,7 @@ class ConcurrentServer:
         self.tcp_json_stream = TcpJsonStream()
 
         self.is_running = True
+        self.is_shutting = False
         self.answer_found = False
         self.registered_clients = set()
 
@@ -75,14 +76,15 @@ class ConcurrentServer:
         to track clients, which take too much time 
         trying to crack the hash
         """
-        self.sent_responses = collections.deque()
+        self.sent_responses = collections.deque(maxlen=1000)
 
     def start(self):
         print("Server: Starting accepting connections...")
         while self.is_running:
             client_socket, client_address = self.socket.accept()
-            print("Client connected: " + str(client_address))
-            self.thread_pool.submit(self.__handle_request, client_socket)
+            if self.is_running and client_socket is not None:
+                print("Client connected: " + str(client_address))
+                self.thread_pool.submit(self.__handle_request, client_socket)
         print("Server: Finishing work...")
 
     def shutdown(self):
@@ -181,7 +183,10 @@ class ConcurrentServer:
         reused_existing_range = False
         entry = self.__get_overdue_entry()
         while entry is not None:
+            print("looking for overdue entry")
+
             if entry.resolved:
+                entry = self.__get_overdue_entry()
                 continue
 
             client_uuid = request.get(RequestSchema.uuid)
@@ -190,12 +195,13 @@ class ConcurrentServer:
             next_entry = QueueEntry(client_uuid, time.time())
             self.sent_responses.append(next_entry)
             self.ranges_for_client[client_uuid] = \
-                (free_range.start, free_range.end, next_entry)
+                (free_range[0], free_range[1], next_entry)
             self.tcp_json_stream.send_message(
                 client_socket,
-                SuccessResponseFactory.create_get_range_response(free_range.start, free_range.end)
+                SuccessResponseFactory.create_get_range_response(free_range[0], free_range[1])
             )
             reused_existing_range = True
+            print("reused range: " + str(free_range))
             break
 
         if reused_existing_range:
@@ -208,10 +214,12 @@ class ConcurrentServer:
                 ErrorCodes.OUT_OF_RANGES,
                 "Out of ranges"
             )
+            self.__init_shutdown()
             self.tcp_json_stream.send_message(client_socket, response)
             client_socket.close()
             return
 
+        print("generated new range: " + str(free_range))
         client_uuid = request.get(RequestSchema.uuid)
         next_entry = QueueEntry(client_uuid, time.time())
         self.sent_responses.append(next_entry)
@@ -330,7 +338,7 @@ class ConcurrentServer:
 
     def __is_answer_correct(self, answer: str):
         return answer is not None and \
-            self.hash == md5(answer).hexdigest() and \
+            self.hash == md5(answer.encode('utf-8')).hexdigest() and \
             len(answer) <= ConcurrentServer.MAX_ANSWER_LENGTH
 
     @synchronized
@@ -339,6 +347,10 @@ class ConcurrentServer:
             return None
 
         entry = self.sent_responses.popleft()
+
+        if entry is None:
+            print('popped None entry')
+
         if time.time() - entry.send_time > ConcurrentServer.TIMEOUT:
             return entry
         else:
@@ -354,6 +366,7 @@ class ConcurrentServer:
 
     @synchronized
     def __resolve_request(self, request: dict):
+        print('trying to resolve request for current client')
         client_uuid = request.get(RequestSchema.uuid)
         range_record = self.ranges_for_client.get(client_uuid, None)
         if range_record is not None:
@@ -361,6 +374,7 @@ class ConcurrentServer:
             entry.resolved = True
 
     def __release_all_clients(self):
+        print("releasing clients")
         while len(self.sent_responses) > 0:
             self.lock.acquire()
             entry = self.sent_responses.popleft()
@@ -368,20 +382,31 @@ class ConcurrentServer:
             if time_diff < ConcurrentServer.TIMEOUT:
                 self.sent_responses.appendleft(entry)
                 time_to_sleep = ConcurrentServer.TIMEOUT - time_diff
+                self.lock.release()
                 time.sleep(time_to_sleep)
             else:
                 self.registered_clients.remove(entry.uuid)
                 del self.ranges_for_client[entry.uuid]
-            self.lock.release()
+                self.lock.release()
+        print("released clients")
 
     def __close(self):
+        print("closing server")
         self.is_running = False
-        self.thread_pool.shutdown()
+        self.thread_pool.shutdown(False)
         self.sent_responses.clear()
         self.ranges_for_client.clear()
         self.registered_clients.clear()
+        socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(self.address)
         self.socket.close()
+        print("closed socket")
 
+    @synchronized
     def __init_shutdown(self):
-        self.shutdown_thread = threading.Thread(target=self.__close())
+        if self.is_shutting:
+            return
+
+        self.is_shutting = True
+        print('shutdown initiated')
+        self.shutdown_thread = threading.Thread(target=self.shutdown)
         self.shutdown_thread.start()
