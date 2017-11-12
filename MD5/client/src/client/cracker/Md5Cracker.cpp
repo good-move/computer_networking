@@ -45,6 +45,7 @@ Crack() {
   for (;permGen_->HasNext(); permGen_->GetNext()) {
     const auto& permutation = permGen_->GetCurrent();
     if (TestHashMatch(permutation)) {
+      matchFound_ = true;
       hashPrototype_ = permutation;
       break;
     }

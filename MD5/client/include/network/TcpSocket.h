@@ -32,6 +32,7 @@ class TcpSocket {
     ~TcpSocket();
 
     int SetOption();
+    int SetReusable(bool reusable);
     int Bind();
     int Connect(const std::string& address, const unsigned short port) const;
     int Connect(const InetSocketAddress& address) const;

@@ -22,10 +22,10 @@ class Client : public ResponseHandler {
   public:
     Client(const unsigned short clientPort,
            const std::string& serverAddress,
-           unsigned short serverPort);
+           unsigned short serverPort,
+           PermutationGenerator* permGen
+    );
     virtual ~Client();
-
-    void InitMd5Cracker(PermutationGenerator* permGen);
 
     /*
      * Sends Register message to the server and receives
@@ -53,6 +53,7 @@ class Client : public ResponseHandler {
     std::unique_ptr<TcpSocket> socket = nullptr;
     std::unique_ptr<InetSocketAddress> serverAddress = nullptr;
     std::unique_ptr<Md5Cracker> md5Cracker = nullptr;
+    PermutationGenerator* permGenerator = nullptr;
 
     std::string uuid;
     std::string targetHash;

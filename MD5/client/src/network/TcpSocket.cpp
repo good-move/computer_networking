@@ -140,3 +140,10 @@ TcpSocket::
 TcpSocket(const int descriptor, const sockaddr_in* address) : socketAddress_(address) {
   socketDescriptor = descriptor;
 }
+
+int
+TcpSocket::
+SetReusable(bool reusable) {
+  const int enabled = (int)reusable;
+  return setsockopt(this->socketDescriptor, SOL_SOCKET, SO_REUSEADDR, &enabled, sizeof(int));
+}

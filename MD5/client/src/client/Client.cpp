@@ -18,14 +18,17 @@ using namespace std;
 Client::
 Client(const unsigned short clientPort,
        const std::string &serverAddress,
-       unsigned short serverPort) {
+       unsigned short serverPort,
+       PermutationGenerator* permGen) {
   this->serverAddress.reset(new InetSocketAddress(serverAddress, serverPort));
   this->socket.reset(new TcpSocket(clientPort));
+  this->socket->SetReusable(true);
   this->socket->Bind();
   if (this->socket->Connect((*this->serverAddress)) == -1) {
     socket->Close();
     throw runtime_error("Failed to connect to server");
   }
+  this->permGenerator = permGen;
   this->jsonStream.reset(new TcpJsonStream(*this->socket));
 }
 
@@ -34,20 +37,17 @@ Client::
 
 void
 Client::
-InitMd5Cracker(PermutationGenerator* permGen) {
-  md5Cracker.reset(new Md5Cracker(permGen, targetHash));
-}
-
-void
-Client::
 Register() {
-  // if socket/cracker is not initialized, throw an error
+  // TODO if socket/cracker is not initialized, throw an error
 
   unique_ptr<Request> request(new RegisterRequest());
+  cerr << "Sending request" << endl;
   jsonStream->Send(request.get());
 
   unique_ptr<Response> response = nullptr;
-  jsonStream->Receive<RegisterResponse, ErrorResponse>(response.get());
+  cerr << "Waiting for response" << endl;
+  response.reset(jsonStream->Receive<RegisterResponse, ErrorResponse>());
+  cerr << "Received response" << endl;
   response->handle(*this);
 }
 
@@ -55,10 +55,13 @@ void
 Client::
 FetchNextAttackRange() {
   unique_ptr<Request> request(new GetRangeRequest{this->uuid});
+  cerr << "Sending Range request" << endl;
   jsonStream->Send(request.get());
 
   unique_ptr<Response> response = nullptr;
-  jsonStream->Receive<GetRangeResponse, ErrorResponse>(response.get());
+  cerr << "Waiting for response" << endl;
+  response.reset(jsonStream->Receive<GetRangeResponse, ErrorResponse>());
+  cerr << "Received response" << endl;
   response->handle(*this);
 }
 
@@ -69,7 +72,7 @@ SendAnswer() {
   jsonStream->Send(request.get());
 
   unique_ptr<Response> response = nullptr;
-  jsonStream->Receive<PostAnswerResponse, ErrorResponse>(response.get());
+  response.reset(jsonStream->Receive<PostAnswerResponse, ErrorResponse>());
   response->handle(*this);
 }
 
@@ -78,6 +81,7 @@ Client::
 FindHashOrigin() {
   md5Cracker->Crack();
   if (md5Cracker->MatchFound()) {
+    cerr << "finishing work" << endl;
     hashOrigin = md5Cracker->GetHashOrigin();
     hashOriginFound = true;
     isRunning = false;
@@ -123,7 +127,6 @@ operator()(const ErrorResponse& error) {
       break;
     case ErrorResponse::ErrorCode::WRONG_ANSWER:
       throw runtime_error("Server responded with 'Wrong Answer' message");
-      break;
     default: throw runtime_error("Unknown error code: " + to_string(error.errorCode));
   }
 }
@@ -131,8 +134,10 @@ operator()(const ErrorResponse& error) {
 void
 Client::
 operator()(const RegisterResponse& response) {
+  cerr << "Registered successfully" << endl;
   targetHash = response.targetHash;
   uuid = response.uuid;
+  md5Cracker.reset(new Md5Cracker(permGenerator, targetHash));
 }
 
 void
