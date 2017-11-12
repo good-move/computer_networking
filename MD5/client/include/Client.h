@@ -35,6 +35,7 @@ class Client : public ResponseHandler {
     void FetchNextAttackRange();
     bool FindHashOrigin();
     void SendAnswer();
+    void Reconnect();
 
 
     bool IsRunning();
@@ -55,6 +56,7 @@ class Client : public ResponseHandler {
     std::unique_ptr<Md5Cracker> md5Cracker = nullptr;
     PermutationGenerator* permGenerator = nullptr;
 
+    unsigned short port;
     std::string uuid;
     std::string targetHash;
     std::string hashOrigin;

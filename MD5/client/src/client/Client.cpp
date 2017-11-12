@@ -20,20 +20,32 @@ Client(const unsigned short clientPort,
        const std::string &serverAddress,
        unsigned short serverPort,
        PermutationGenerator* permGen) {
+  this->port = clientPort;
   this->serverAddress.reset(new InetSocketAddress(serverAddress, serverPort));
   this->socket.reset(new TcpSocket(clientPort));
+  this->socket->SetReusable(true);
+  this->socket->Bind();
+  if (this->socket->Connect((*this->serverAddress)) == -1) {
+    throw runtime_error("Failed to connect to server");
+  }
+  this->permGenerator = permGen;
+  this->jsonStream.reset(new TcpJsonStream());
+}
+
+Client::
+~Client() {}
+
+void
+Client::
+Reconnect() {
+  this->socket.reset(new TcpSocket(this->port));
   this->socket->SetReusable(true);
   this->socket->Bind();
   if (this->socket->Connect((*this->serverAddress)) == -1) {
     socket->Close();
     throw runtime_error("Failed to connect to server");
   }
-  this->permGenerator = permGen;
-  this->jsonStream.reset(new TcpJsonStream(*this->socket));
 }
-
-Client::
-~Client() {}
 
 void
 Client::
@@ -42,11 +54,11 @@ Register() {
 
   unique_ptr<Request> request(new RegisterRequest());
   cerr << "Sending request" << endl;
-  jsonStream->Send(request.get());
+  jsonStream->Send(request.get(), *socket);
 
   unique_ptr<Response> response = nullptr;
   cerr << "Waiting for response" << endl;
-  response.reset(jsonStream->Receive<RegisterResponse, ErrorResponse>());
+  response.reset(jsonStream->Receive<RegisterResponse, ErrorResponse>(*socket));
   cerr << "Received response" << endl;
   response->handle(*this);
 }
@@ -56,11 +68,11 @@ Client::
 FetchNextAttackRange() {
   unique_ptr<Request> request(new GetRangeRequest{this->uuid});
   cerr << "Sending Range request" << endl;
-  jsonStream->Send(request.get());
+  jsonStream->Send(request.get(), *socket);
 
   unique_ptr<Response> response = nullptr;
   cerr << "Waiting for response" << endl;
-  response.reset(jsonStream->Receive<GetRangeResponse, ErrorResponse>());
+  response.reset(jsonStream->Receive<GetRangeResponse, ErrorResponse>(*socket));
   cerr << "Received response" << endl;
   response->handle(*this);
 }
@@ -69,10 +81,10 @@ void
 Client::
 SendAnswer() {
   unique_ptr<Request> request(new PostAnswerRequest{this->uuid, this->hashOrigin});
-  jsonStream->Send(request.get());
+  jsonStream->Send(request.get(), *socket);
 
   unique_ptr<Response> response = nullptr;
-  response.reset(jsonStream->Receive<PostAnswerResponse, ErrorResponse>());
+  response.reset(jsonStream->Receive<PostAnswerResponse, ErrorResponse>(*socket));
   response->handle(*this);
 }
 

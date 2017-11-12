@@ -15,9 +15,7 @@ class TcpJsonStream {
   using message_size_type = int;
 
   public:
-    TcpJsonStream(TcpSocket& socket) : socket(socket) {}
-
-    void Send(const JsonSerializable* request) const {
+    void Send(const JsonSerializable* request, TcpSocket& socket) const {
       const std::string requestJson = request->ToJson();
       message_size_type jsonLength = (message_size_type)requestJson.length();
 
@@ -38,7 +36,7 @@ class TcpJsonStream {
     }
 
     template <class SuccessType, class ErrorType>
-    Response* Receive() const {
+    Response* Receive(TcpSocket& socket) const {
       message_size_type messageSize = 0;
       std::cerr << "Waint for message length" << std::endl;
       if (socket.Receive(&messageSize, sizeof(message_size_type), TcpSocket::NO_FLAGS) < 0) {
@@ -82,9 +80,6 @@ class TcpJsonStream {
 
       return response;
     }
-
-  private:
-    TcpSocket& socket;
 };
 
 
