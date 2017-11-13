@@ -2,3 +2,4 @@
 *cmake*
 *CMake*
 **/__pycache__/**
+*.log
