@@ -55,7 +55,6 @@ Crack() {
 bool
 Md5Cracker::
 TestHashMatch(const std::string& testString) const {
-  cout << "Testing " << testString  << " for hash match" << endl;
   unsigned char* md5Hash = MD5((unsigned char*)testString.c_str(), testString.length(), nullptr);
 
   static string md5String = "";
@@ -67,9 +66,9 @@ TestHashMatch(const std::string& testString) const {
     md5String += "0123456789abcdef"[md5Hash[i] % 16];
   }
 
-//  cout << "Result: " << md5String << endl;
-//  cout << "Target: " << targetHash_ << endl;
-  cout << "Matched: " << (md5String == targetHash_) << endl;
+  cerr << "Tested " << testString  << " for hash match ----- ";
+  cerr << "Matched: " << (md5String == targetHash_ ? "true" : "false") << endl;
+
   return md5String == targetHash_;
 }
 

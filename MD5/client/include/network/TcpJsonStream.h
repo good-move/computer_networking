@@ -19,14 +19,13 @@ class TcpJsonStream {
       const std::string requestJson = request->ToJson();
       message_size_type jsonLength = (message_size_type)requestJson.length();
 
-      std::cerr << "Sending message length: " << jsonLength << std::endl;
-
       auto bytesSent = socket.Send(
               &jsonLength, sizeof(message_size_type), TcpSocket::NO_FLAGS);
       if (bytesSent < 0) {
         throw std::runtime_error("Failed to send JSON length");
       }
 
+      std::cerr << "Sending JSON: " << requestJson << std::endl;
       bytesSent = socket.Send(
               requestJson.c_str(), (size_t)jsonLength, TcpSocket::NO_FLAGS);
       if (bytesSent < 0) {
@@ -37,19 +36,17 @@ class TcpJsonStream {
 
     template <class SuccessType, class ErrorType>
     Response* Receive(TcpSocket& socket) const {
+      std::cerr << "Waiting for response" << std::endl;
+
       message_size_type messageSize = 0;
-      std::cerr << "Waint for message length" << std::endl;
       if (socket.Receive(&messageSize, sizeof(message_size_type), TcpSocket::NO_FLAGS) < 0) {
         throw std::runtime_error("Failed to receive message length");
       }
-
-      std::cerr << "Length: " << messageSize << std::endl;
 
       if (messageSize < 0) {
         throw std::runtime_error("Failed to receive message: message length cannot be a negative number");
       }
 
-      std::cerr << "Waiting for JSON response" << std::endl;
       char* jsonStringBuffer = new char[messageSize+1]();
       if (socket.Receive(jsonStringBuffer, (size_t)messageSize, TcpSocket::NO_FLAGS) < 0) {
         throw std::runtime_error("Failed to receive JSON response");

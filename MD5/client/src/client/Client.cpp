@@ -53,11 +53,10 @@ Register() {
   // TODO if socket/cracker is not initialized, throw an error
 
   unique_ptr<Request> request(new RegisterRequest());
-  cerr << "Sending request" << endl;
+  cerr << "Sending Register request" << endl;
   jsonStream->Send(request.get(), *socket);
 
   unique_ptr<Response> response = nullptr;
-  cerr << "Waiting for response" << endl;
   response.reset(jsonStream->Receive<RegisterResponse, ErrorResponse>(*socket));
   cerr << "Received response" << endl;
   response->handle(*this);
@@ -71,7 +70,6 @@ FetchNextAttackRange() {
   jsonStream->Send(request.get(), *socket);
 
   unique_ptr<Response> response = nullptr;
-  cerr << "Waiting for response" << endl;
   response.reset(jsonStream->Receive<GetRangeResponse, ErrorResponse>(*socket));
   cerr << "Received response" << endl;
   response->handle(*this);
@@ -80,11 +78,16 @@ FetchNextAttackRange() {
 void
 Client::
 SendAnswer() {
+  cerr << "Sending PostAnswer request" << endl;
+
   unique_ptr<Request> request(new PostAnswerRequest{this->uuid, this->hashOrigin});
   jsonStream->Send(request.get(), *socket);
 
   unique_ptr<Response> response = nullptr;
   response.reset(jsonStream->Receive<PostAnswerResponse, ErrorResponse>(*socket));
+
+  cerr << "Received response" << endl;
+
   response->handle(*this);
 }
 
@@ -93,7 +96,7 @@ Client::
 FindHashOrigin() {
   md5Cracker->Crack();
   if (md5Cracker->MatchFound()) {
-    cerr << "finishing work" << endl;
+    cerr << "Hash origin found: finishing cracking" << endl;
     hashOrigin = md5Cracker->GetHashOrigin();
     hashOriginFound = true;
     isRunning = false;
@@ -155,11 +158,12 @@ operator()(const RegisterResponse& response) {
 void
 Client::
 operator()(const GetRangeResponse& response) {
+  cerr << "Got a new range: " << "(" <<  response.rangeStart << ", "<< response.rangeEnd << ")"<< endl;
   md5Cracker->SetRange(response.rangeStart, response.rangeEnd);
 }
 
 void
 Client::
 operator()(const PostAnswerResponse& response) {
-
+  cerr << "Answer has been accepted by server" << endl;
 }
