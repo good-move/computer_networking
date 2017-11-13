@@ -12,6 +12,7 @@ def print_help():
 def main():
     if len(sys.argv) < EXPECTED_ARGS_COUNT:
         print_help()
+        return
 
     port = int(sys.argv[1])
     target_hash = str(sys.argv[2])
@@ -21,7 +22,6 @@ def main():
     server.start()
     print("server finished")
 
-#     start server
 
 if __name__ == "__main__":
     main()

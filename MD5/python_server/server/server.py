@@ -6,6 +6,9 @@ import socket
 import uuid
 import time
 
+import sys
+
+from server.utils import eprint
 from server.permutation import PermutationGenerator
 from server.tcp_json_stream import TcpJsonStream
 from server.message import *
@@ -37,7 +40,7 @@ class ConcurrentServer:
     TIMEOUT = 3
     RANGE_SIZE = 1000
     THREADS_COUNT = 5
-    MAX_ANSWER_LENGTH = 2
+    MAX_ANSWER_LENGTH = 10
     DEFAULT_ALPHABET = 'ACGT'
 
     def __init__(self, target_hash: str, host: str, port: int):
@@ -96,7 +99,7 @@ class ConcurrentServer:
             # read json
             request = self.tcp_json_stream.read_message(client_socket)
             request_code = int(request.get("code", -1))
-            print("Request code: " + str(request_code))
+            eprint("Request code: " + str(request_code))
 
             # choose a handler to handle current request
             handlers_map = {
@@ -112,7 +115,7 @@ class ConcurrentServer:
             handlers_map.get(request_code, self.__handle_unknown_request)(client_socket, request)
 
         except ValueError as err:
-            print(repr(err))
+            eprint(repr(err))
             error = ErrorResponseFactory.create(
                 ErrorCodes.INVALID_MESSAGE_FORMAT,
                 "Invalid message format"
@@ -120,7 +123,7 @@ class ConcurrentServer:
             self.tcp_json_stream.send_message(client_socket, error)
             client_socket.close()
         except Exception as err:
-            print(repr(err))
+            eprint(repr(err))
             error = ErrorResponseFactory.create(
                 ErrorCodes.INTERNAL_SERVER_ERROR,
                 "Server encountered an unknown error"
@@ -137,7 +140,7 @@ class ConcurrentServer:
         protocol documentation
     """
     def __handle_registration_request(self, client_socket: socket.socket, request: dict):
-        print("Client wants to register: " + str(client_socket.getsockname()))
+        eprint("Client wants to register: " + str(client_socket.getsockname()))
         if not self.__is_answer_found():
             # generate uuid hex string
             client_uuid = uuid.uuid4().hex
@@ -183,7 +186,7 @@ class ConcurrentServer:
         reused_existing_range = False
         entry = self.__get_overdue_entry()
         while entry is not None:
-            print("looking for overdue entry")
+            eprint("looking for overdue entry")
 
             if entry.resolved:
                 entry = self.__get_overdue_entry()
@@ -201,7 +204,7 @@ class ConcurrentServer:
                 SuccessResponseFactory.create_get_range_response(free_range[0], free_range[1])
             )
             reused_existing_range = True
-            print("reused range: " + str(free_range))
+            eprint("reused range: " + str(free_range))
             break
 
         if reused_existing_range:
@@ -219,7 +222,7 @@ class ConcurrentServer:
             client_socket.close()
             return
 
-        print("generated new range: " + str(free_range))
+        eprint("generated new range: " + str(free_range))
         client_uuid = request.get(RequestSchema.uuid)
         next_entry = QueueEntry(client_uuid, time.time())
         self.sent_responses.append(next_entry)
@@ -269,7 +272,7 @@ class ConcurrentServer:
                 error = ErrorResponseFactory.create(ErrorCodes.WRONG_ANSWER, "Wrong answer: " + answer)
                 self.tcp_json_stream.send_message(client_socket, error)
         except Exception as err:
-            print(repr(err))
+            eprint(repr(err))
         finally:
             client_socket.close()
 
@@ -281,7 +284,7 @@ class ConcurrentServer:
         protocol documentation
     """
     def __handle_unknown_request(self, client_socket: socket.socket, request: dict):
-        print("Received unknown request from: " + str(client_socket.getsockname()))
+        eprint("Received unknown request from: " + str(client_socket.getsockname()))
 
         error = ErrorResponseFactory.create(
             ErrorCodes.UNKNOWN_REQUEST_CODE,
@@ -348,9 +351,6 @@ class ConcurrentServer:
 
         entry = self.sent_responses.popleft()
 
-        if entry is None:
-            print('popped None entry')
-
         if time.time() - entry.send_time > ConcurrentServer.TIMEOUT:
             return entry
         else:
@@ -366,7 +366,7 @@ class ConcurrentServer:
 
     @synchronized
     def __resolve_request(self, request: dict):
-        print('trying to resolve request for current client')
+        eprint('trying to resolve request for current client')
         client_uuid = request.get(RequestSchema.uuid)
         range_record = self.ranges_for_client.get(client_uuid, None)
         if range_record is not None:
@@ -374,7 +374,7 @@ class ConcurrentServer:
             entry.resolved = True
 
     def __release_all_clients(self):
-        print("releasing clients")
+        print("releasing clients...")
         while len(self.sent_responses) > 0:
             self.lock.acquire()
             entry = self.sent_responses.popleft()
@@ -391,7 +391,7 @@ class ConcurrentServer:
         print("released clients")
 
     def __close(self):
-        print("closing server")
+        eprint("closing server")
         self.is_running = False
         self.thread_pool.shutdown(False)
         self.sent_responses.clear()
@@ -399,7 +399,7 @@ class ConcurrentServer:
         self.registered_clients.clear()
         socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(self.address)
         self.socket.close()
-        print("closed socket")
+        eprint("closed socket")
 
     @synchronized
     def __init_shutdown(self):
@@ -407,6 +407,6 @@ class ConcurrentServer:
             return
 
         self.is_shutting = True
-        print('shutdown initiated')
+        eprint('shutdown initiated')
         self.shutdown_thread = threading.Thread(target=self.shutdown)
         self.shutdown_thread.start()

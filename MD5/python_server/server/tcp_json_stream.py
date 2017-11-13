@@ -2,6 +2,8 @@ import socket
 import json
 import struct
 
+from server.utils import eprint
+
 
 class TcpJsonStream:
 
@@ -17,7 +19,8 @@ class TcpJsonStream:
     """
     @staticmethod
     def read_message(sock: socket.socket):
-        print("Reading message length")
+        eprint("Reading request")
+
         # read message length
         data = sock.recv(TcpJsonStream.MESSAGE_LENGTH_SIZE)
         if not data:
@@ -29,14 +32,13 @@ class TcpJsonStream:
         if message_length < 0:
             raise ValueError("Message length cannot be a negative number")
 
-        print("Reading message of size " + str(message_length))
         # read json and decode into a dict
         data = sock.recv(message_length)
         if not data:
-            print("no data received")
+            eprint("no data received")
             raise ValueError("No JSON object is received")
         data = str(data, 'ascii')
-        print(str(json.loads(data)))
+        eprint(str(json.loads(data)))
         # print("JSON string ", str(json_string))
         return json.loads(data)
 
@@ -50,16 +52,17 @@ class TcpJsonStream:
     """
     @staticmethod
     def send_message(sock: socket.socket, message: dict):
-        print("Endoding message to JSON")
+        eprint("Sending response")
+        eprint("Encoding message to JSON")
 
         json_message = json.dumps(message)
 
-        print("Encoded json: " + json_message)
+        eprint("Encoded json: " + json_message)
         message_length = len(json_message)
 
-        print("Sending message length")
+        eprint("Sending message length")
         sock.send(struct.pack('i', message_length))
-        print("Sending JSON message")
+        eprint("Sending JSON message")
         # sock.sendall(json_message)
         sock.send(bytes(json_message.encode('ascii')))
-        print('sent')
+        eprint('Response sent')
