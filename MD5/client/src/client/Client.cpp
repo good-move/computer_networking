@@ -158,7 +158,7 @@ operator()(const RegisterResponse& response) {
 void
 Client::
 operator()(const GetRangeResponse& response) {
-  cerr << "Got a new range: " << "(" <<  response.rangeStart << ", "<< response.rangeEnd << ")"<< endl;
+  cout << "Got a new range: " << "(" <<  response.rangeStart << ", "<< response.rangeEnd << ")"<< endl;
   md5Cracker->SetRange(response.rangeStart, response.rangeEnd);
 }
 

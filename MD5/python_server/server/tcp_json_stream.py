@@ -42,8 +42,6 @@ class TcpJsonStream:
         # print("JSON string ", str(json_string))
         return json.loads(data)
 
-
-
     """
         Encodes python dict into JSON and sends it over the socket 
         

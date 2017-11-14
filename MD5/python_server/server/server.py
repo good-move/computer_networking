@@ -37,10 +37,10 @@ def synchronized(method):
 
 class ConcurrentServer:
 
-    TIMEOUT = 3
-    RANGE_SIZE = 1000
+    TIMEOUT = 10
+    RANGE_SIZE = 100000
     THREADS_COUNT = 5
-    MAX_ANSWER_LENGTH = 10
+    MAX_ANSWER_LENGTH = 30
     DEFAULT_ALPHABET = 'ACGT'
 
     def __init__(self, target_hash: str, host: str, port: int):
@@ -86,7 +86,7 @@ class ConcurrentServer:
         while self.is_running:
             client_socket, client_address = self.socket.accept()
             if self.is_running and client_socket is not None:
-                print("Client connected: " + str(client_address))
+                eprint("Client connected: " + str(client_address))
                 self.thread_pool.submit(self.__handle_request, client_socket)
         print("Server: Finishing work...")
 
