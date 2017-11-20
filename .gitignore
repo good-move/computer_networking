@@ -1,3 +1,4 @@
 .idea
 *.jar
 **/*.iml
+__init__.py
