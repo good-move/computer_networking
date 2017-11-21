@@ -4,7 +4,7 @@ from .user import *
 
 class UserStorage:
 
-    def __int__(self):
+    def __init__(self):
         self.__id_user_map = dict()
         self.__username_user_map = dict()
         self.__id_generator = IdGenerator()
@@ -15,11 +15,13 @@ class UserStorage:
     def get_by_username(self, username: str) -> User:
         return self.__username_user_map.get(username, None)
 
-    def create_user(self, username: str, status: Status = Status.ONLINE):
+    def create_user(self, username: str, status: Status = Status.ONLINE) -> User:
         user_id = self.__id_generator.get_next_id()
         user = User(user_id, username, status)
         self.__id_user_map[user_id] = user
         self.__username_user_map[username] = user
+
+        return user
 
     def update_status(self, status: Status, user_id=None, username=None):
         if user_id is None and username is None:

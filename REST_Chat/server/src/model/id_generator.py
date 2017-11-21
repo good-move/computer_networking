@@ -3,7 +3,7 @@ from threading import RLock
 
 class IdGenerator:
 
-    def __int__(self):
+    def __init__(self):
         self.__id = -1
         self.__lock = RLock()
 
