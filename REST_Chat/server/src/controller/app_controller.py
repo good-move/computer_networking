@@ -30,6 +30,11 @@ def authorization(func):
 @RouteController
 class AppController:
 
+    DEFAULT_MESSAGE_LIST_SIZE = 10
+    MAX_MESSAGE_LIST_SIZE = 10
+    DEFAULT_OFFSET = -10
+
+
     def __init__(self):
         self.__users_db = UserStorage()
         self.__messages_db = MessageStorage()
@@ -107,7 +112,37 @@ class AppController:
     @GET('/messages')
     @authorization
     def get_message_list(self, request: HttpRequest) -> HttpResponse:
-        return HttpResponse()
+        list_size = self.__init_int_value(
+            request.query_params.get('count', None),
+            AppController.DEFAULT_MESSAGE_LIST_SIZE
+        )
+
+        if list_size is None or list_size < 0:
+            return HttpResponse(400, ResponseMessages.messages.get(400))
+
+        offset = self.__init_int_value(
+            request.query_params.get('offset', None),
+            AppController.DEFAULT_OFFSET
+        )
+
+        if offset is None:
+            return HttpResponse(400, ResponseMessages.messages.get(400))
+
+        return HttpJsonResponse({
+            'messages': self.__messages_db.get_history(offset, list_size)
+        })
+
+    def __is_string_integer(self, string: str):
+        return re.match(r"^-?\d+$", string) is not None
+
+    def __init_int_value(self, string_value: str, default_value: int) -> int:
+        if string_value is not None:
+            if self.__is_string_integer(string_value):
+                return int(string_value)
+            else:
+                return None
+
+        return default_value
 
     @staticmethod
     def is_auth_header_format_valid(auth_header: str) -> bool:
