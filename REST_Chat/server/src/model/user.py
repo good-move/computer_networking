@@ -3,9 +3,12 @@ from enum import Enum
 
 
 class Status(Enum):
-    OFFLINE='offline'
-    ONLINE='online'
-    SLEEPING='sleeping'
+    OFFLINE = 'offline'
+    ONLINE = 'online'
+    SLEEPING = 'sleeping'
+
+    def __repr__(self):
+        return self.value
 
 
 class User:
