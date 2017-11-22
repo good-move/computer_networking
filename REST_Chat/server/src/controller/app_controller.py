@@ -4,6 +4,7 @@ import re
 from pyrest.decorators import RouteController, POST, GET
 from pyrest.http import HttpRequest, HttpResponse, HttpJsonResponse, HttpJsonRequest, Headers, ContentType, \
     ResponseMessages
+from src.model.message import Message
 from src.model.message_storage import MessageStorage
 from src.model.user import Status, User
 from src.model.users_storage import UserStorage
@@ -128,9 +129,20 @@ class AppController:
         if offset is None:
             return HttpResponse(400, ResponseMessages.messages.get(400))
 
+        message_history = [
+            self.__serialize_message(m) for m in self.__messages_db.get_history(offset, list_size)
+        ]
+
         return HttpJsonResponse({
-            'messages': self.__messages_db.get_history(offset, list_size)
+            'messages': message_history
         })
+
+    def __serialize_message(self, message: Message) -> dict:
+        return {
+            'id': message.get_id(),
+            'author_id': message.get_author_id(),
+            'message': message.get_content()
+        }
 
     def __is_string_integer(self, string: str):
         return re.match(r"^-?\d+$", string) is not None
