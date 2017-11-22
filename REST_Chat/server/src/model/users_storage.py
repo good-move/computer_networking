@@ -28,12 +28,12 @@ class UserStorage:
             raise ValueError('Cannot locate user: either user_id or username must be specified')
 
         if user_id is not None:
-            self.update_status_with_key(self.__id_user_map, 'id', user_id, status)
+            self.__update_status_with_key(self.__id_user_map, 'id', user_id, status)
 
         if username is not None:
-            self.update_status_with_key(self.__id_user_map, 'username', username, status)
+            self.__update_status_with_key(self.__username_user_map, 'username', username, status)
 
-    def update_status_with_key(self, storage: dict, key_name: str, key_value, status: Status):
+    def __update_status_with_key(self, storage: dict, key_name: str, key_value, status: Status):
         user = storage.get(key_value)
         if user is None:
             raise ReferenceError('User with %s %d doesn\'t exist'.format(key_name, key_value))
