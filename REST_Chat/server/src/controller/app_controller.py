@@ -56,6 +56,7 @@ class AppController:
     @authorization
     def logout(self, request: HttpRequest) -> HttpResponse:
         auth_token = self.get_auth_header_value(request.headers.get(Headers.auth))
+        self.__users_db.update_status(Status.OFFLINE, username=self.authorized_users.get(auth_token))
         del self.authorized_users[auth_token]
 
         return HttpJsonResponse({
@@ -65,8 +66,8 @@ class AppController:
     @GET('/users')
     @authorization
     def get_user_list(self, request: HttpRequest) -> HttpResponse:
-        self.get_auth_header_value(request.headers.get(Headers.auth))
         users = [self.__serialize_user(user) for user in self.__users_db.get_online_users()]
+
         return HttpJsonResponse({
             'users': users
         })
@@ -74,8 +75,6 @@ class AppController:
     @GET('/users/{id:int}')
     @authorization
     def get_user(self, request: HttpRequest, user_id: int) -> HttpResponse:
-        print('GET ' + request.path)
-
         user = self.__users_db.get_by_id(user_id)
         if user is None:
             return HttpResponse(404)
@@ -101,7 +100,6 @@ class AppController:
 
     @staticmethod
     def is_auth_header_format_valid(auth_header: str) -> bool:
-        print(auth_header)
         return re.match(r"^Authorization: Token [-a-zA-Z0-9]+$", auth_header) is not None
 
     @staticmethod
