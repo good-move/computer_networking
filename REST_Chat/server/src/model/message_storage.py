@@ -11,8 +11,10 @@ class MessageStorage:
         self.__message_history = list()
         self.__id_generator = IdGenerator()
 
-    def add_to_history(self, content: str, author_id: int):
-        self.__message_history.append(Message(self.__id_generator.get_next_id(), content, author_id))
+    def add_to_history(self, content: str, author_id: int) -> Message:
+        new_message = Message(self.__id_generator.get_next_id(), content, author_id)
+        self.__message_history.append(new_message)
+        return new_message
 
     def get_history(self,
                     offset: int = DEFAULT_HISTORY_OFFSET,
