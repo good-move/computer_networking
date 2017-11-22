@@ -2,7 +2,8 @@ import uuid
 import re
 
 from pyrest.decorators import RouteController, POST, GET
-from pyrest.http import HttpRequest, HttpResponse, HttpJsonResponse, HttpJsonRequest, Headers, ContentType
+from pyrest.http import HttpRequest, HttpResponse, HttpJsonResponse, HttpJsonRequest, Headers, ContentType, \
+    ResponseMessages
 from src.model.message_storage import MessageStorage
 from src.model.user import Status, User
 from src.model.users_storage import UserStorage
@@ -13,13 +14,13 @@ def authorization(func):
     def decorator(self, request: HttpRequest, *args, **kwargs):
         token_header = request.headers.get(Headers.auth)
         if token_header is None:
-            return HttpResponse(401, 'Unauthorized')
+            return HttpResponse(401, ResponseMessages.messages.get(401))
         if not AppController.is_auth_header_format_valid(token_header):
-            return HttpResponse(400, 'Bad Request')
+            return HttpResponse(400, ResponseMessages.messages.get(400))
 
         token_value = AppController.get_auth_header_value(token_header)
         if self.authorized_users.get(token_value) is None:
-            return HttpResponse(403, 'Forbidden')
+            return HttpResponse(403, ResponseMessages.messages.get(403))
 
         return func(self, request, *args, **kwargs)
 
@@ -36,7 +37,16 @@ class AppController:
 
     @POST('/login')
     def login(self, request: HttpJsonRequest) -> HttpResponse:
-        username = request.get_json().get('username')
+        # if content type is not a json actually
+        if request.headers.get(Headers.content_type) != ContentType.json:
+            return HttpResponse(400, ResponseMessages.messages.get(400))
+
+        username = request.get_json().get('username', None)
+
+        # if request body doesn't contain required 'username' field
+        if username is None:
+            return HttpResponse(400, ResponseMessages.messages.get(400))
+
         if username not in self.authorized_users.values():
             user = self.__users_db.get_by_username(username)
             if user is None:
@@ -50,7 +60,8 @@ class AppController:
                 'token': user_token
             })
 
-        return HttpResponse(401).add_header('WWW-Authenticate', 'Token realm=\'Username is already in use\'')
+        return HttpResponse(401, ResponseMessages.messages.get(401))\
+            .add_header('WWW-Authenticate', 'Token realm=\'Username is already in use\'')
 
     @GET('/logout')
     @authorization
