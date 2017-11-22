@@ -35,7 +35,6 @@ class AppController:
     MAX_MESSAGE_LIST_SIZE = 10
     DEFAULT_OFFSET = -10
 
-
     def __init__(self):
         self.__users_db = UserStorage()
         self.__messages_db = MessageStorage()
@@ -107,8 +106,25 @@ class AppController:
 
     @POST('/messages')
     @authorization
-    def post_message(self, request: HttpRequest) -> HttpResponse:
-        return HttpResponse()
+    def post_message(self, request: HttpJsonRequest) -> HttpResponse:
+        # if content type is not a json actually
+        if request.headers.get(Headers.content_type) != ContentType.json:
+            return HttpResponse(400, ResponseMessages.messages.get(400))
+
+        message_content = request.get_json().get('message', None)
+        # if required json field 'message' is missing
+        if message_content is None:
+            return HttpResponse(400, ResponseMessages.messages.get(400))
+
+        auth_token = self.get_auth_header_value(request.headers.get(Headers.auth))
+        # what if user logged out while we were processing this request???
+        user = self.__users_db.get_by_username(self.authorized_users.get(auth_token))
+        message = self.__messages_db.add_to_history(message_content, user.get_id())
+
+        return HttpJsonResponse({
+            'id': message.get_id(),
+            'message': message_content
+        })
 
     @GET('/messages')
     @authorization
