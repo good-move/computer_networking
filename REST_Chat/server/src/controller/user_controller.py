@@ -9,11 +9,6 @@ from src.model.user import Status, User
 from src.model.users_storage import UserStorage
 
 
-class AuthErrors(Enum):
-    NO_AUTH_TOKEN=0
-    UNKNOWN_TOKEN=1
-
-
 def check_auth(func):
 
     def decorator(self, request: HttpRequest, *args, **kwargs):
