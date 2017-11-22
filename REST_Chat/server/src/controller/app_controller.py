@@ -37,10 +37,12 @@ class AppController:
     @POST('/login')
     def login(self, request: HttpJsonRequest) -> HttpResponse:
         username = request.get_json().get('username')
-        if self.__users_db.get_by_username(username) is None:
-            user = self.__users_db.create_user(username)
-            user_token = str(uuid.uuid4())
+        if username not in self.authorized_users.values():
+            user = self.__users_db.get_by_username(username)
+            if user is None:
+                user = self.__users_db.create_user(username)
 
+            user_token = str(uuid.uuid4())
             self.authorized_users[user_token] = username
 
             return HttpJsonResponse({
@@ -53,14 +55,17 @@ class AppController:
     @GET('/logout')
     @authorization
     def logout(self, request: HttpRequest) -> HttpResponse:
-        if not self.__check_auth(request):
-            pass
-        print('GET: ' + request.path)
-        return HttpResponse()
+        auth_token = self.get_auth_header_value(request.headers.get(Headers.auth))
+        del self.authorized_users[auth_token]
+
+        return HttpJsonResponse({
+            'message': 'bye!'
+        })
 
     @GET('/users')
     @authorization
     def get_user_list(self, request: HttpRequest) -> HttpResponse:
+        self.get_auth_header_value(request.headers.get(Headers.auth))
         users = [self.__serialize_user(user) for user in self.__users_db.get_online_users()]
         return HttpJsonResponse({
             'users': users
