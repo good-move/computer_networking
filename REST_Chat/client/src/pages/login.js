@@ -26,8 +26,22 @@ class LoginPage extends React.Component {
 
     sendLoginRequest(username) {
         API.session.login(username)
-            .then(response => console.log(response))
-            .catch(error => console.log(error));
+            .then(response => {
+                const auth_token = response.data.token;
+                console.log("Received token: ", auth_token);
+                this.setState({
+                    isLoggedIn: true,
+                    isPendingResponse: false
+                }, () => this.props.onTokenReceived(auth_token));
+            })
+            .catch(error => {
+                if (error.response) {
+                    console.log(error.response.status);
+                }
+                this.setState({
+                    isPendingResponse: false
+                });
+            });
     }
 
     render() {
