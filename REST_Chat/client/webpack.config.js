@@ -27,6 +27,5 @@ module.exports = {
             filename: "bundle.css",
             allChunks: true
         })
-    ],
-    watch: true
+    ]
 };
