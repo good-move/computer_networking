@@ -2,7 +2,7 @@ import React from 'react';
 
 import UserList from '../components/UserList.js';
 
-
+import API from '../server-api.js';
 
 const APP_NAME = "REST CHAT";
 
@@ -15,6 +15,18 @@ export default class ChatPage extends React.Component {
         this.state = {
             userList: []
         };
+    }
+
+    componentDidMount() {
+        API.users.getOnlineUsers()
+            .then(response => {
+                const userList = response.data.users;
+                console.log(userList);
+                this.setState({ userList: userList });
+            })
+            .catch(error => {
+                console.log(error);
+            })
     }
 
     render() {
