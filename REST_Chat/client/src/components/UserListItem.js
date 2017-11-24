@@ -1,10 +1,10 @@
 import React from 'react';
+import styles from '../styles/userlist.scss';
 
 const UserListItem = ({ user }) => {
     return (
-        <div className={"userListItem"}>
+        <div className={styles.userListItem}>
             <p className={"userNameView"}>{user.username}</p>
-            <p className={"userStatusView"}>{user.status}</p>
         </div>
     );
 };

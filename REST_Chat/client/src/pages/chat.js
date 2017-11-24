@@ -1,7 +1,7 @@
 import React from 'react';
 
 import UserList from '../components/UserList.js';
-
+import styles from '../styles/chat.scss';
 import API from '../server-api.js';
 
 const APP_NAME = "REST CHAT";
@@ -31,26 +31,26 @@ export default class ChatPage extends React.Component {
 
     render() {
         return (
-            <div className={"chatPage"}>
-                <div className={"chatHeader"}>
+            <div className={styles.chatPage}>
+                <div className={styles.chatHeader}>
                     <h1>{APP_NAME}</h1>
-                    <div className={"controls"}>
+                    <div className={styles.controls}>
                         <input
-                            className={"logoutButton"}
+                            className={styles.logoutButton}
                             type={"button"}
                             value={"Log out"}
                         />
                     </div>
                 </div>
-                <div className={"chatBody"}>
-                    <div className={"userListColumn"}>
+                <div className={styles.chatBody}>
+                    <div className={styles.userListColumn}>
                         <UserList userList={this.state.userList} />
                     </div>
-                    <div className={"chatViewColumn"}>
-                        <div className={"messageListView"}>
+                    <div className={styles.chatViewColumn}>
+                        <div className={styles.messageListView}>
 
                         </div>
-                        <div className={"messageInputView"}>
+                        <div className={styles.messageInputView}>
 
                         </div>
                     </div>
