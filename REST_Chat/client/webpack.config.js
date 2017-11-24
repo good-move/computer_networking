@@ -13,7 +13,15 @@ module.exports = {
                 enforce: "pre",
                 test: /\.(css|sass|scss)$/,
                 exclude: path.resolve(__dirname, "node_modules"),
-                loaders: ExtractTextPlugin.extract(["css-loader", "sass-loader"])
+                loaders: ExtractTextPlugin.extract([
+                    {
+                        loader: "css-loader",
+                        options: {
+                            modules: true,
+                            localIdentName: "[path][name]__[local]"
+                        }
+                    }, "sass-loader"
+                ])
             },
             {
                 test: /\.jsx?$/,
