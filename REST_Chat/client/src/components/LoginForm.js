@@ -1,6 +1,8 @@
 import React from 'react';
 
-const USERNAME_PLACEHOLDER = "USERNAME...";
+import styles from '../styles/login.scss';
+
+const USERNAME_PLACEHOLDER = "Select username...";
 
 
 export default class LoginForm extends React.Component {
@@ -9,7 +11,7 @@ export default class LoginForm extends React.Component {
         super(props);
 
         this.state = {
-            username: USERNAME_PLACEHOLDER
+            username: ''
         };
     }
 
@@ -33,17 +35,18 @@ export default class LoginForm extends React.Component {
 
     render() {
         return (
-            <div className={"loginFormHolder"}>
-                <form className={"loginForm"}>
+            <div className={styles.loginFormHolder}>
+                <form className={styles.loginForm}>
                     <input
-                        className={"usernameInput"}
+                        className={styles.usernameInput}
                         type={"text"}
                         placeholder={USERNAME_PLACEHOLDER}
                         value={this.state.username}
                         onChange={this.onUsernameChange.bind(this)}
+                        autoFocus
                     />
                     <input
-                        className={"submitLoginButton"}
+                        className={styles.submitLoginButton}
                         type={"submit"}
                         value={"Log in"}
                         onClick={this.onLoginSubmit.bind(this)}

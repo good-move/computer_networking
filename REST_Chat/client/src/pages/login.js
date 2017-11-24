@@ -2,6 +2,7 @@ import React from 'react';
 
 import LoginForm from '../components/LoginForm.js';
 import API from '../server-api.js';
+import styles from '../styles/login.scss';
 
 const APP_NAME = "REST CHAT";
 
@@ -46,9 +47,9 @@ class LoginPage extends React.Component {
 
     render() {
         return (
-            <div className={"loginPage"}>
-                <div className={"appNameHolder"}>
-                    <h1 className={"appName"}>{APP_NAME}</h1>
+            <div className={styles.loginPage}>
+                <div className={styles.appNameHolder}>
+                    <h1 className={styles.appName}>{APP_NAME}</h1>
                 </div>
                 <LoginForm
                     disabled={this.state.isPendingResponse}
