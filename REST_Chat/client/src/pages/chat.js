@@ -1,11 +1,15 @@
 import React from 'react';
 
-import UserList from '../components/UserList.js';
 import styles from '../styles/chat.scss';
+
+import UserList from '../components/UserList.js';
+import MessageInput from '../components/MessageInput.js';
+import MessageList from '../components/MessageList.js';
+
 import API from '../server-api.js';
 
 const APP_NAME = "REST CHAT";
-
+const POLL_INTERVAL = 1000;
 
 export default class ChatPage extends React.Component {
 
@@ -13,11 +17,15 @@ export default class ChatPage extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            userList: []
+            userList: [],
+            messageList: []
         };
+
+        this.messageListUpdater = null;
+        this.userListUpdater = null;
     }
 
-    componentDidMount() {
+    updateUserList() {
         API.users.getOnlineUsers()
             .then(response => {
                 const userList = response.data.users;
@@ -27,6 +35,38 @@ export default class ChatPage extends React.Component {
             .catch(error => {
                 console.log(error);
             })
+    }
+
+    updateMessageList() {
+        API.messages.getList()
+            .then(response => {
+                this.setState({
+                    messageList: response.data.messages
+                });
+            })
+            .catch(error => {
+                console.log(error);
+            })
+    }
+
+    componentDidMount() {
+        this.updateMessageList();
+        this.updateUserList();
+        this.messageListUpdater = setInterval(this.updateMessageList.bind(this), POLL_INTERVAL);
+        this.userListUpdater = setInterval(this.updateUserList.bind(this), POLL_INTERVAL);
+    }
+
+    componentWillUnmount() {
+        clearInterval(this.messageListUpdater);
+        clearInterval(this.userListUpdater);
+    }
+
+    postMessage(message) {
+        API.messages.create(message)
+            .then(response => {
+                console.log("Message sent!");
+            })
+            .catch(error => console.log(error));
     }
 
     render() {
@@ -48,10 +88,12 @@ export default class ChatPage extends React.Component {
                     </div>
                     <div className={styles.chatViewColumn}>
                         <div className={styles.messageListView}>
-
+                            <MessageList
+                                messageList={this.state.messageList}
+                            />
                         </div>
                         <div className={styles.messageInputView}>
-
+                            <MessageInput onSendMessage={this.postMessage.bind(this)} />
                         </div>
                     </div>
                 </div>

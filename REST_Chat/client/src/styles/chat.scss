@@ -24,16 +24,35 @@
   }
 
   .chatBody {
+    display: table;
     height: 80%;
+    width: 100%;
     border: 1px solid #dfdfdf;
     background: #fff;
 
     .userListColumn {
+      display: table-cell;
       max-height: 100%;
       max-width: 30%;
       overflow-y: scroll;
       border-right: 1px solid #dfdfdf;
     }
+
+    .chatViewColumn {
+      display: table-cell;
+
+      .messageListView {
+        display: table-row;
+        height: 80%;
+        overflow-y: scroll;
+      }
+
+      .messageInputView {
+        display: table-row;
+        height: 60%;
+      }
+    }
+
   }
 
 }
