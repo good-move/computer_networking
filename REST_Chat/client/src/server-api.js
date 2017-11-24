@@ -12,15 +12,39 @@ const makeAsyncRequest = (url, request_method, params={}, headers={}, data={}) =
     });
 };
 
+const REQUEST_METHODS = {
+    get: 'GET',
+    post: 'POST',
+    put: 'PUT',
+    update: 'UPDATE'
+};
 
-class MessageApi {
+class Api {
 
-    constructor(){
-        this.url = "messages";
+    constructor(path) {
+        this.path = path;
+        this.auth_token = null
+    }
+
+    setAuthToken(token) {
+        this.auth_token = token;
+    }
+
+    getAuthHeader() {
+        return {
+            "Authorization": `Authorization: Token ${this.auth_token}`
+        }
+    }
+}
+
+class MessageApi extends Api {
+
+    constructor(path){
+        super(path);
     }
 
     getList() {
-        return makeAsyncRequest(this.url, 'GET');
+        return makeAsyncRequest(this.path, REQUEST_METHODS.get, {}, this.getAuthHeader());
     }
 
     create(message) {
@@ -28,23 +52,31 @@ class MessageApi {
             message: message
         };
 
-        return makeAsyncRequest(this.url, 'POST', parameters, headers)
+        return makeAsyncRequest(this.url, REQUEST_METHODS.post, parameters)
     }
 
 }
 
-class UsersApi {
+class UsersApi extends Api {
 
-    constructor(){
-        this.url = "users";
+    constructor(path) {
+        super(path);
     }
 
     getOnlineUsers() {
-        return makeAsyncRequest(this.url, 'GET');
+        return makeAsyncRequest(
+            this.path,
+            REQUEST_METHODS.get, {},
+            this.getAuthHeader()
+        );
     }
 
     getUser(userId) {
-        return makeAsyncRequest(`${this.url}/${userId}`, 'GET');
+        return makeAsyncRequest(
+            `${this.path}/${userId}`,
+            REQUEST_METHODS.get, {},
+            this.getAuthHeader()
+        );
     }
 
 }
@@ -66,8 +98,15 @@ class SessionApi {
 
 }
 
-export default {
-    messages: new MessageApi(),
-    users: new UsersApi(),
-    session: new SessionApi()
-}
+
+const api = {
+    messages: new MessageApi('messages'),
+    users: new UsersApi('users'),
+    session: new SessionApi(),
+    __setAuthToken : token => {
+        api.messages.setAuthToken(token);
+        api.users.setAuthToken(token);
+    }
+};
+
+export default api;
