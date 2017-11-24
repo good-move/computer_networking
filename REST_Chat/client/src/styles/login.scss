@@ -1,0 +1,29 @@
+.loginPage {
+  max-width: 80%;
+  height: 100%;
+  margin: 0 auto;
+  text-align: center;
+
+  .appNameHolder {
+    padding: 2em 0;
+    .appName {
+      font-weight: 600;
+      font-size: 4em;
+    }
+  }
+
+
+  .loginForm {
+    .usernameInput {
+      font-size: 3em;
+      border: none;
+      border-bottom: 1px solid #000;
+      background: transparent;
+      outline: none;
+    }
+    .submitLoginButton {
+      display: none;
+    }
+  }
+
+}
