@@ -36,7 +36,7 @@ export default class LoginForm extends React.Component {
     render() {
         return (
             <div className={styles.loginFormHolder}>
-                <form className={styles.loginForm}>
+                <form className={styles.loginForm} onSubmit={this.onLoginSubmit.bind(this)}>
                     <input
                         className={styles.usernameInput}
                         type={"text"}
