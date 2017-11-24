@@ -1,0 +1,40 @@
+.chatPage {
+  display: block;
+  margin: 0 auto;
+  max-width: 60%;
+  height: 100vh;
+
+  .chatHeader {
+    width: 100%;
+    height:10%;
+    display: table;
+
+    h1, .controls {
+      display: table-cell;
+    }
+
+    h1 {
+      width: 40%;
+      font-weight: 400;
+    }
+
+    .logoutButton {
+      float: right;
+    }
+  }
+
+  .chatBody {
+    height: 80%;
+    border: 1px solid #dfdfdf;
+    background: #fff;
+
+    .userListColumn {
+      max-height: 100%;
+      max-width: 30%;
+      overflow-y: scroll;
+      border-right: 1px solid #dfdfdf;
+    }
+  }
+
+}
+

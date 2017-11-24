@@ -1,0 +1,20 @@
+.userList {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+
+  .userListHolder {
+    padding: 0;
+    margin: 0;
+
+    .userListItem {
+      margin: 0;
+      border-bottom: 1px solid #dfdfdf;
+      text-indent: 0.5em;
+    }
+
+  }
+
+}
