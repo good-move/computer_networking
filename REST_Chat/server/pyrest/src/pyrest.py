@@ -3,6 +3,8 @@ from http.server import BaseHTTPRequestHandler
 
 import sys
 
+import re
+
 from pyrest.http import HttpRequest, HttpResponse, HttpJsonRequest, ContentType, Headers
 from pyrest.src.exceptions import *
 from pyrest.src.router import Router
@@ -19,7 +21,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         print('new POST request')
         content_type = self.headers.get(Headers.content_type)
         http_request = None
-        if content_type == ContentType.json:
+        if re.match(ContentType.json, content_type):
             content_length = int(self.headers.get(Headers.content_length))
             json_bytes = self.rfile.read(content_length)
             json_obj = json.loads(str(json_bytes, 'UTF-8'))
@@ -33,6 +35,10 @@ class RequestHandler(BaseHTTPRequestHandler):
     def do_DELETE(self):
         print('new DELETE request')
         self.__handle_request()
+
+    def do_OPTIONS(self):
+        print('new OPTIONS request')
+        self.__send_response(HttpResponse())
 
     def __handle_request(self, http_request: HttpRequest = None):
         try:
@@ -50,6 +56,9 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.__send_response(http_response)
 
     def __send_response(self, http_response: HttpResponse):
+        http_response.add_header('Access-Control-Allow-Origin', '*')\
+                    .add_header('Access-Control-Allow-Headers', 'Content-Type')\
+                    .add_header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE')
         self.send_response(http_response.get_code(), http_response.get_message())
         for name, value in http_response.get_headers().items():
             self.send_header(name, value)
