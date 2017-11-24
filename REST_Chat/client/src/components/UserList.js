@@ -1,8 +1,8 @@
-import { Component } from 'react';
+import React from 'react';
 
 import UserListItem from './UserListItem.js';
 
-export default class UserList extends Component {
+export default class UserList extends React.Component {
 
     render() {
         const userList = this.props.userList.map(user =>
