@@ -48,11 +48,11 @@ class MessageApi extends Api {
     }
 
     create(message) {
-        const parameters = {
+        const data = {
             message: message
         };
 
-        return makeAsyncRequest(this.url, REQUEST_METHODS.post, parameters)
+        return makeAsyncRequest(this.path, REQUEST_METHODS.post, {}, this.getAuthHeader(), data);
     }
 
 }
