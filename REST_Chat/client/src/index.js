@@ -4,6 +4,7 @@ import { BrowserRouter, Switch, Route, Redirect } from 'react-router-dom';
 
 import styles from './styles/main.scss';
 
+import API from './server-api.js';
 import LoginPage from './pages/login.js';
 import ChatPage from './pages/chat.js';
 import NotFoundPage from './pages/not_found.js';
@@ -22,7 +23,7 @@ class App extends React.Component {
 
     onAuthTokenReceived(token) {
         console.log("Auth. token received: " + token);
-
+        API.__setAuthToken(token);
         this.setState({
             isLoggedIn: true,
             authToken: token
