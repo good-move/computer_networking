@@ -43,7 +43,7 @@ class AppController:
     @POST('/login')
     def login(self, request: HttpJsonRequest) -> HttpResponse:
         # if content type is not a json actually
-        if request.headers.get(Headers.content_type) != ContentType.json:
+        if not re.match(ContentType.json, request.headers.get(Headers.content_type)):
             return HttpResponse(400, ResponseMessages.messages.get(400))
 
         username = request.get_json().get('username', None)
@@ -108,7 +108,7 @@ class AppController:
     @authorization
     def post_message(self, request: HttpJsonRequest) -> HttpResponse:
         # if content type is not a json actually
-        if request.headers.get(Headers.content_type) != ContentType.json:
+        if not re.match(ContentType.json, request.headers.get(Headers.content_type)):
             return HttpResponse(400, ResponseMessages.messages.get(400))
 
         message_content = request.get_json().get('message', None)
