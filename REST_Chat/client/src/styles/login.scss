@@ -7,6 +7,7 @@
   .appNameHolder {
     padding: 2em 0;
     .appName {
+      color: #FFC107;
       font-weight: 600;
       font-size: 4em;
     }
@@ -17,10 +18,16 @@
     .usernameInput {
       font-size: 3em;
       border: none;
-      border-bottom: 1px solid #000;
+      border-bottom: 1px solid #FFC107;
       background: transparent;
       outline: none;
+      color: #212121;
     }
+
+    .usernameInput::placeholder {
+      color: #BDBDBD;
+    }
+
     .submitLoginButton {
       display: none;
     }
