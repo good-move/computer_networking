@@ -56,8 +56,7 @@ export default class ChatPage extends React.Component {
     }
 
     componentWillUnmount() {
-        clearInterval(this.messageListUpdater);
-        clearInterval(this.userListUpdater);
+        this.stopUpdaters()
     }
 
     postMessage(message) {
@@ -66,6 +65,16 @@ export default class ChatPage extends React.Component {
                 console.log("Message sent!");
             })
             .catch(error => console.log(error));
+    }
+
+    onLogout(event) {
+        this.stopUpdaters();
+        this.props.onLogout();
+    }
+
+    stopUpdaters() {
+        clearInterval(this.messageListUpdater);
+        clearInterval(this.userListUpdater);
     }
 
     render() {
@@ -78,6 +87,7 @@ export default class ChatPage extends React.Component {
                             className={styles.logoutButton}
                             type={"button"}
                             value={"Log out"}
+                            onClick={this.onLogout.bind(this)}
                         />
                     </div>
                 </div>

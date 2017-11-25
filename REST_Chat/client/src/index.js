@@ -30,20 +30,22 @@ class App extends React.Component {
         });
     }
 
+    onLogout() {
+        API.session.logout(this.state.authToken)
+            .then(response => this.setState({
+                isLoggedIn: false,
+                authToken: null
+            }))
+            .catch(error => console.error(error))
+    }
+
     render() {
         return (
-            <Switch>
-                <Route exact path='/' render={() => (
-                        this.state.isLoggedIn ? (
-                            <Redirect to={'/chat'} />
-                        ) : (
-                            <LoginPage onTokenReceived={this.onAuthTokenReceived.bind(this)} />
-                        )
-                    )
-                } />
-                <Route path='/chat' component={ChatPage} />
-                <Route component={NotFoundPage} />
-            </Switch>
+            !this.state.isLoggedIn ? (
+                <LoginPage onTokenReceived={this.onAuthTokenReceived.bind(this)} />
+            ) : (
+                <ChatPage onLogout={this.onLogout.bind(this)} />
+            )
         );
     }
 

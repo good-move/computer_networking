@@ -92,8 +92,14 @@ class SessionApi {
         );
     }
 
-    logout() {
-        return null;
+    logout(auth_token) {
+        return makeAsyncRequest(
+            "logout",
+            REQUEST_METHODS.get,
+            {}, {
+                "Authorization": `Authorization: Token ${auth_token}`
+            }
+        );
     }
 
 }
