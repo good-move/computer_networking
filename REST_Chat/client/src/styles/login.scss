@@ -34,10 +34,17 @@
   }
 
   .errorMessage {
+    display: block;
     margin: 0 auto;
+    padding: 0.5rem 0;
     text-align: center;
-    height: 2rem;
     color: orangered;
+  }
+
+  .usernameFormatDescription {
+    @extend .errorMessage;
+    color: #000;
+    text-align: left;
   }
 
 }

@@ -11,24 +11,28 @@ export default class LoginForm extends React.Component {
         super(props);
 
         this.state = {
-            username: ''
+            username: '',
+            isUsernameFormatValid: true
         };
     }
 
     onLoginSubmit(event) {
         event.preventDefault();
-
-        const username = this.state.username.trim();
-        if (username.match(/^\w+$/) !== null) {
-            this.props.onLoginSubmit(username);
-        } else {
-            window.alert("Username must contain only digits, English letters or _");
+        if (this.state.isUsernameFormatValid) {
+            this.props.onLoginSubmit(this.state.username);
         }
     }
 
     onUsernameChange(event) {
+        let isUsernameValid = true;
         const username = event.target.value.trim();
+
+        if (!username.match(/^(\w){8,}$/)) {
+            isUsernameValid = false;
+        }
+
         this.setState({
+            isUsernameFormatValid: isUsernameValid,
             username: username
         });
     }
@@ -53,6 +57,15 @@ export default class LoginForm extends React.Component {
                         disabled={this.props.disabled}
                     />
                 </form>
+                {!this.state.isUsernameFormatValid &&
+                <div className={styles.usernameFormatDescription}>
+                    Username must:
+                    <ul>
+                        <li>consist of English letters and an underscore (A-Za-z_)</li>
+                        <li>be at least 8 letters long</li>
+                    </ul>
+                </div>
+                }
             </div>
         );
     }
