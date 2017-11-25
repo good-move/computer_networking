@@ -37,7 +37,7 @@ export default class MessageInput extends React.Component {
                     <input
                         className={styles.sendMessageButton}
                         type={"submit"}
-                        value={"Send"}
+                        value={"SEND"}
                         onSubmit={this.onSendMessage.bind(this)}
                     />
                 </form>
