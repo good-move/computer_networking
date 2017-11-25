@@ -92,6 +92,11 @@ export default class ChatPage extends React.Component {
         this.stopUpdaters()
     }
 
+    componentDidUpdate() {
+        const messageListElement = document.getElementById("messageListView");
+        messageListElement.scrollTop = messageListElement.scrollHeight;
+    }
+
     postMessage(message) {
         API.messages.create(message)
             .then(response => {
@@ -129,7 +134,7 @@ export default class ChatPage extends React.Component {
                         <UserList userList={this.state.userList} />
                     </div>
                     <div className={styles.chatViewColumn}>
-                        <div className={styles.messageListView}>
+                        <div className={styles.messageListView} id={"messageListView"}>
                             <MessageList
                                 messageList={this.state.messageList}
                             />
