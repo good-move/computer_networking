@@ -37,6 +37,9 @@ export default class MessageInput extends React.Component {
     onSendMessage(event) {
         event.preventDefault();
         const message = this.state.message.trim();
+
+        if (message.length === 0) return;
+
         this.setState({
             message: ''
         }, () => this.props.onSendMessage(message));
