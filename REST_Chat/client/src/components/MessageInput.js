@@ -28,7 +28,6 @@ export default class MessageInput extends React.Component {
     }
 
     onEnterPressed(event) {
-        console.log("key pressed");
         if (event.keyCode === 13 && !event.shiftKey) {
             this.onSendMessage(event);
         }

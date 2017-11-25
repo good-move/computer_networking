@@ -75,7 +75,6 @@ export default class ChatPage extends React.Component {
                     .then(responses => {
                         responses.forEach(res => {
                             usernames.set(res.data.id, res.data.username);
-                            console.log("username set: " + usernames.get(res.data.id))
                         });
 
                         messageList = messageList.map(message =>

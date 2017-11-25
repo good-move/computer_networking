@@ -20,7 +20,6 @@ class LoginPage extends React.Component {
     }
 
     onLogin(username) {
-        console.log(username);
         this.setState({
             isPendingResponse: true
         }, () => this.sendLoginRequest(username));
@@ -30,7 +29,6 @@ class LoginPage extends React.Component {
         API.session.login(username)
             .then(response => {
                 const auth_token = response.data.token;
-                console.log("Received token: ", auth_token);
                 this.setState({
                     isLoggedIn: true,
                     isPendingResponse: false
