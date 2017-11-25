@@ -1,5 +1,5 @@
 from src.model.id_generator import IdGenerator
-from src.model.message import Message
+from src.model.message import Message, MessageType
 
 
 class MessageStorage:
@@ -11,8 +11,8 @@ class MessageStorage:
         self.__message_history = list()
         self.__id_generator = IdGenerator()
 
-    def add_to_history(self, content: str, author_id: int) -> Message:
-        new_message = Message(self.__id_generator.get_next_id(), content, author_id)
+    def add_to_history(self, content: str, author_id: int, type: MessageType = MessageType.TEXT) -> Message:
+        new_message = Message(self.__id_generator.get_next_id(), content, author_id, type)
         self.__message_history.append(new_message)
         return new_message
 
