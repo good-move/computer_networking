@@ -39,12 +39,19 @@ class App extends React.Component {
             .catch(error => console.error(error))
     }
 
+    requireAuth() {
+        this.setState({
+            isLoggedIn: false,
+            authToken: null
+        });
+    }
+
     render() {
         return (
             !this.state.isLoggedIn ? (
                 <LoginPage onTokenReceived={this.onAuthTokenReceived.bind(this)} />
             ) : (
-                <ChatPage onLogout={this.onLogout.bind(this)} />
+                <ChatPage onLogout={this.onLogout.bind(this)} requireAuth={this.requireAuth.bind(this)} />
             )
         );
     }

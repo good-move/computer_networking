@@ -13,7 +13,6 @@ const POLL_INTERVAL = 1000;
 
 export default class ChatPage extends React.Component {
 
-
     constructor(props) {
         super(props);
         this.state = {
@@ -24,6 +23,22 @@ export default class ChatPage extends React.Component {
 
         this.messageListUpdater = null;
         this.userListUpdater = null;
+    }
+
+    componentDidMount() {
+        this.updateMessageList();
+        this.updateUserList();
+        this.messageListUpdater = setInterval(this.updateMessageList.bind(this), POLL_INTERVAL);
+        this.userListUpdater = setInterval(this.updateUserList.bind(this), POLL_INTERVAL);
+    }
+
+    componentWillUnmount() {
+        this.stopUpdaters()
+    }
+
+    componentDidUpdate() {
+        const messageListElement = document.getElementById("messageListView");
+        messageListElement.scrollTop = messageListElement.scrollHeight;
     }
 
     updateUserList() {
@@ -73,28 +88,14 @@ export default class ChatPage extends React.Component {
                         });
                     })
                     .catch(error => {
+                        this.checkRequireAuth(error);
                        console.error("Failed to load users information: " + error.toString());
                     });
             })
             .catch(error => {
+                this.checkRequireAuth(error);
                 console.log(error);
             })
-    }
-
-    componentDidMount() {
-        this.updateMessageList();
-        this.updateUserList();
-        this.messageListUpdater = setInterval(this.updateMessageList.bind(this), POLL_INTERVAL);
-        this.userListUpdater = setInterval(this.updateUserList.bind(this), POLL_INTERVAL);
-    }
-
-    componentWillUnmount() {
-        this.stopUpdaters()
-    }
-
-    componentDidUpdate() {
-        const messageListElement = document.getElementById("messageListView");
-        messageListElement.scrollTop = messageListElement.scrollHeight;
     }
 
     postMessage(message) {
@@ -103,6 +104,16 @@ export default class ChatPage extends React.Component {
                 console.log("Message sent!");
             })
             .catch(error => console.log(error));
+    }
+
+    checkRequireAuth(error) {
+        if (error.response) {
+            const status = error.response.status;
+            if (status === 403 || status === 401) {
+                this.stopUpdaters();
+                this.props.requireAuth();
+            }
+        }
     }
 
     onLogout(event) {
