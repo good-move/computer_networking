@@ -29,8 +29,7 @@ export default class ChatPage extends React.Component {
     updateUserList() {
         API.users.getOnlineUsers()
             .then(response => {
-                const userList = response.data.users;
-                this.setState({ userList: userList });
+                this.setState({ userList: response.data.users });
             })
             .catch(error => {
                 console.log(error);
@@ -120,7 +119,7 @@ export default class ChatPage extends React.Component {
                         <input
                             className={styles.logoutButton}
                             type={"button"}
-                            value={"Log out"}
+                            value={"LOG OUT"}
                             onClick={this.onLogout.bind(this)}
                         />
                     </div>
