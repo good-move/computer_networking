@@ -51,6 +51,7 @@ export default class MessageInput extends React.Component {
                         className={styles.messageTextArea}
                         onChange={this.onMessageContentChange.bind(this)}
                         value={this.state.message}
+                        autoFocus
                     />
                     <input
                         className={styles.sendMessageButton}
