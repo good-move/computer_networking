@@ -29,7 +29,6 @@ export default class ChatPage extends React.Component {
         API.users.getOnlineUsers()
             .then(response => {
                 const userList = response.data.users;
-                console.log(userList);
                 this.setState({ userList: userList });
             })
             .catch(error => {

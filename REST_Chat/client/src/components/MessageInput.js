@@ -12,16 +12,14 @@ export default class MessageInput extends React.Component {
     }
 
     onMessageContentChange(event) {
-        const message = event.target.value.trim();
-        console.log(message);
         this.setState({
-            message: message
+            message: event.target.value
         });
     }
 
     onSendMessage(event) {
         event.preventDefault();
-        const message = this.state.message;
+        const message = this.state.message.trim();
         this.setState({
             message: ''
         }, () => this.props.onSendMessage(message));
@@ -37,6 +35,7 @@ export default class MessageInput extends React.Component {
                         value={this.state.message}
                     />
                     <input
+                        className={styles.sendMessageButton}
                         type={"submit"}
                         value={"Send"}
                         onSubmit={this.onSendMessage.bind(this)}
