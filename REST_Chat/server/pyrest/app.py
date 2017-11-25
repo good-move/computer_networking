@@ -6,6 +6,9 @@ from pyrest.src.pyrest import DEFAULT_SERVER_ADDRESS, RequestHandler
 from pyrest.src.router import Router
 
 
+class ThreadedHttpServer(ThreadingMixIn, HTTPServer):
+    pass
+
 class PyRest:
 
     class State:
@@ -31,6 +34,6 @@ class PyRest:
             raise AssertionError('Server is already running')
 
         print('Starting server...')
-        self.server = HTTPServer(self.server_address, RequestHandler)
+        self.server = ThreadedHttpServer(self.server_address, RequestHandler)
         print('Listening at ' + str(self.server_address))
         self.server.serve_forever(poll_interval)
