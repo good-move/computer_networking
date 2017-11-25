@@ -4,7 +4,7 @@ import re
 from pyrest.decorators import RouteController, POST, GET
 from pyrest.http import HttpRequest, HttpResponse, HttpJsonResponse, HttpJsonRequest, Headers, ContentType, \
     ResponseMessages
-from src.model.message import Message
+from src.model.message import Message, MessageType
 from src.model.message_storage import MessageStorage
 from src.model.user import Status, User
 from src.model.users_storage import UserStorage
@@ -57,8 +57,11 @@ class AppController:
             if user is None:
                 user = self.__users_db.create_user(username)
 
+            self.__users_db.update_status(Status.ONLINE, user.get_id())
             user_token = str(uuid.uuid4())
             self.authorized_users[user_token] = username
+
+            self.__messages_db.add_to_history('joined chat', user.get_id(), MessageType.NOTIFICATION)
 
             return HttpJsonResponse({
                 **self.__serialize_user(user),
@@ -72,7 +75,9 @@ class AppController:
     @authorization
     def logout(self, request: HttpRequest) -> HttpResponse:
         auth_token = self.get_auth_header_value(request.headers.get(Headers.auth))
-        self.__users_db.update_status(Status.OFFLINE, username=self.authorized_users.get(auth_token))
+        user = self.__users_db.get_by_username(self.authorized_users.get(auth_token))
+        self.__users_db.update_status(Status.OFFLINE, username=user.get_username())
+        self.__messages_db.add_to_history('left chat', user.get_id(), MessageType.NOTIFICATION)
         del self.authorized_users[auth_token]
 
         return HttpJsonResponse({
@@ -157,7 +162,8 @@ class AppController:
         return {
             'id': message.get_id(),
             'author_id': message.get_author_id(),
-            'message': message.get_content()
+            'message': message.get_content(),
+            'type': message.get_type().value
         }
 
     def __is_string_integer(self, string: str):
