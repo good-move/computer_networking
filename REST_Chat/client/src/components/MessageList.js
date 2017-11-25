@@ -5,7 +5,7 @@ import styles from '../styles/message_view.scss';
 
 const MessageListItem = ({ message }) => (
     <div className={styles.messageListItem}>
-        <p>{message.author_id}</p>
+        <p>{message.username}</p>
         <p>{message.message}</p>
     </div>
 );

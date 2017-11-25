@@ -17,6 +17,7 @@ export default class ChatPage extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
+            usernames: new Map(),
             userList: [],
             messageList: []
         };
@@ -39,9 +40,42 @@ export default class ChatPage extends React.Component {
     updateMessageList() {
         API.messages.getList()
             .then(response => {
-                this.setState({
-                    messageList: response.data.messages
+                const currentList = this.state.messageList;
+                let messageList = response.data.messages;
+
+                if (currentList.length > 0 &&
+                    currentList[0].id === messageList[0].id &&
+                    currentList.length === messageList.length) {
+                    return;
+                }
+
+                let usernames = this.state.usernames;
+                let usernamePromises = [];
+                messageList.forEach(message => {
+                   if (!usernames.has(message.author_id)) {
+                       usernamePromises.push(API.users.getUser(message.author_id));
+                   }
                 });
+
+                Promise.all(usernamePromises)
+                    .then(responses => {
+                        responses.forEach(res => {
+                            usernames.set(res.data.id, res.data.username);
+                            console.log("username set: " + usernames.get(res.data.id))
+                        });
+
+                        messageList = messageList.map(message =>
+                            Object.assign({}, message, { username: usernames.get(message.author_id) })
+                        );
+
+                        this.setState({
+                            usernames: usernames,
+                            messageList: messageList
+                        });
+                    })
+                    .catch(error => {
+                       console.error("Failed to load users information: " + error.toString());
+                    });
             })
             .catch(error => {
                 console.log(error);
