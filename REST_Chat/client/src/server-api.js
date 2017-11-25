@@ -43,8 +43,13 @@ class MessageApi extends Api {
         super(path);
     }
 
-    getList() {
-        return makeAsyncRequest(this.path, REQUEST_METHODS.get, {}, this.getAuthHeader());
+    getList(count=100, offset=-100) {
+        return makeAsyncRequest(
+            this.path,
+            REQUEST_METHODS.get,
+            { count: count, offset: offset },
+            this.getAuthHeader()
+        );
     }
 
     create(message) {
