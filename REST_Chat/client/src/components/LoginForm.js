@@ -27,7 +27,7 @@ export default class LoginForm extends React.Component {
         let isUsernameValid = true;
         const username = event.target.value.trim();
 
-        if (!username.match(/^(\w){8,}$/)) {
+        if (!username.match(/^\w+$/)) {
             isUsernameValid = false;
         }
 
