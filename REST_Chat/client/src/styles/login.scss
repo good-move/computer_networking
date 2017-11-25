@@ -1,5 +1,5 @@
 .loginPage {
-  max-width: 80%;
+  max-width: 30em;
   height: 100%;
   margin: 0 auto;
   text-align: center;
@@ -31,6 +31,13 @@
     .submitLoginButton {
       display: none;
     }
+  }
+
+  .errorMessage {
+    margin: 0 auto;
+    text-align: center;
+    height: 2rem;
+    color: orangered;
   }
 
 }

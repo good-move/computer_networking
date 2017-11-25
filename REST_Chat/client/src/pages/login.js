@@ -14,7 +14,8 @@ class LoginPage extends React.Component {
 
         this.state = {
             isLoggedIn: false,
-            isPendingResponse: false
+            isPendingResponse: false,
+            showUsernameTakenError: false
         };
     }
 
@@ -40,7 +41,8 @@ class LoginPage extends React.Component {
                     console.log(error.response.status);
                 }
                 this.setState({
-                    isPendingResponse: false
+                    isPendingResponse: false,
+                    showUsernameTakenError: error.response.status === 401
                 });
             });
     }
@@ -55,6 +57,9 @@ class LoginPage extends React.Component {
                     disabled={this.state.isPendingResponse}
                     onLoginSubmit={this.onLogin.bind(this)}
                 />
+                {this.state.showUsernameTakenError &&
+                <div className={styles.errorMessage}><p>Username is already taken</p></div>
+                }
             </div>
         );
     }
