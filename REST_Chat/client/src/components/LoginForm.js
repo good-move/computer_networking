@@ -59,11 +59,7 @@ export default class LoginForm extends React.Component {
                 </form>
                 {!this.state.isUsernameFormatValid &&
                 <div className={styles.usernameFormatDescription}>
-                    Username must:
-                    <ul>
-                        <li>consist of English letters and an underscore (A-Za-z_)</li>
-                        <li>be at least 8 letters long</li>
-                    </ul>
+                    <p>Username must consist of English letters and an underscore (A-Za-z_)</p>
                 </div>
                 }
             </div>
