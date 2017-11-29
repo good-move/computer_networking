@@ -112,4 +112,19 @@ public class TouSegment {
         SYNACK
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        TouSegment segment = (TouSegment) o;
+
+        return sequenceNumber == segment.sequenceNumber;
+    }
+
+    @Override
+    public int hashCode() {
+        return sequenceNumber;
+    }
+
 }
