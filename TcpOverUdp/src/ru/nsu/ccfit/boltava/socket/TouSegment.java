@@ -8,6 +8,9 @@ public class TouSegment {
 
     private int sequenceNumber;
     private int acknowledgementNumber;
+    private boolean ackFlag;
+    private boolean synFlag;
+    private boolean finFlag;
     private SegmentType type;
     private byte[] payload = new byte[0];
 
@@ -22,6 +25,14 @@ public class TouSegment {
 
     public int getAcknowledgementNumber() {
         return acknowledgementNumber;
+    }
+
+    public void setSequenceNumber(int sequenceNumber) {
+        this.sequenceNumber = sequenceNumber;
+    }
+
+    public void setAckNumber(int ackNumber) {
+        this.acknowledgementNumber = ackNumber;
     }
 
     public InetSocketAddress getAddress() {
@@ -40,7 +51,15 @@ public class TouSegment {
         byte[] segment = new byte[TouProtocolUtils.SEGMENT_HEADER_LENGTH + payload.length];
         TouProtocolUtils.writeSequenceNumber(segment, sequenceNumber);
         TouProtocolUtils.writeAckNumber(segment, acknowledgementNumber);
-        TouProtocolUtils.setAckFlag(segment);
+        if (ackFlag) {
+            TouProtocolUtils.setAckFlag(segment);
+        }
+        if (finFlag) {
+            TouProtocolUtils.hasFinFlag(segment);
+        }
+        if (synFlag) {
+            TouProtocolUtils.hasFinFlag(segment);
+        }
         // write payload into segment
         System.arraycopy(payload, 0, segment, TouProtocolUtils.SEGMENT_HEADER_LENGTH, payload.length);
         return  segment;
@@ -50,6 +69,9 @@ public class TouSegment {
         sequenceNumber = TouProtocolUtils.readSequenceNumber(content);
         acknowledgementNumber = TouProtocolUtils.readAckNumber(content);
         payload = new byte[content.length - TouProtocolUtils.SEGMENT_HEADER_LENGTH];
+        synFlag = TouProtocolUtils.hasSynFlag(content);
+        finFlag = TouProtocolUtils.hasFinFlag(content);
+        ackFlag = TouProtocolUtils.hasAckFlag(content);
 
         System.arraycopy(
                 content,
@@ -69,6 +91,18 @@ public class TouSegment {
         } else {
             type = SegmentType.ACK;
         }
+    }
+
+    public void changeAckFlag(boolean flagValue) {
+        ackFlag = flagValue;
+    }
+
+    public void changeFinFlag(boolean flagValue) {
+        finFlag = flagValue;
+    }
+
+    public void changeSynFlag(boolean flagValue) {
+        synFlag = flagValue;
     }
 
     public enum SegmentType {
