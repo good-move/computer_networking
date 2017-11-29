@@ -9,17 +9,6 @@ import java.util.Random;
 
 public class TouSocket {
 
-    // Size of the buffer, used to store data to be sent
-    private static final int BUFFER_SIZE = 64 * 1000;
-    // Max segment size. Segment is a piece of data from data buffer
-    private static final int MAX_SEGMENT_SIZE = 4 * 1000;
-
-
-    // buffer to store data to be sent
-    private byte[] receivedDataBuffer = new byte[BUFFER_SIZE];
-    private int bufferStart = 0;
-    private int bufferEnd = receivedDataBuffer.length;
-
     private DatagramSocket localSocket;
     private InetAddress address;
     private int port;
@@ -27,7 +16,6 @@ public class TouSocket {
     private boolean isBound = false;
     private boolean isConnected = false;
 
-    private long sequenceNumber = (long) new Random().nextInt();
     private long ackNumber = 0;
 
     private final Object lock = new Object();
