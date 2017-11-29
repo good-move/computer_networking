@@ -8,12 +8,14 @@ package ru.nsu.ccfit.boltava.socket;
  * ========================================
  * Sequence number | Acknowledgement number|
  * ========================================
- * S |A |F | DataLength | Data.............|
+ * S |A |F | Offset | Data.................|
  * ========================================
- * 64|65|66|67--------79|80----------------|
+ * 64|65|66|67----69|70--------------------|
  *
  */
-public class TcpProtocolUtils {
+public class TouProtocolUtils {
+
+    public static int SEGMENT_HEADER_LENGTH = 9;
 
     private static final int FLAGS_BYTE_INDEX = 8;
 
@@ -21,7 +23,7 @@ public class TcpProtocolUtils {
         segmentHeader[FLAGS_BYTE_INDEX] |= 0b1000_0000;
     }
 
-    public static boolean getSynFlag(byte[] segmentHeader) {
+    public static boolean hasSynFlag(byte[] segmentHeader) {
         return ((segmentHeader[FLAGS_BYTE_INDEX] & 0b1000_0000) >> 7) == 1;
     }
 
@@ -29,7 +31,7 @@ public class TcpProtocolUtils {
         segmentHeader[FLAGS_BYTE_INDEX] |= 0b0100_0000;
     }
 
-    public static boolean getAckFlag(byte[] segmentHeader) {
+    public static boolean hasAckFlag(byte[] segmentHeader) {
         return ((segmentHeader[FLAGS_BYTE_INDEX] & 0b0100_0000) >> 6) == 1;
     }
 
@@ -37,7 +39,7 @@ public class TcpProtocolUtils {
         segmentHeader[FLAGS_BYTE_INDEX] |= 0b0010_0000;
     }
 
-    public static boolean getFinFlag(byte[] segmentHeader) {
+    public static boolean hasFinFlag(byte[] segmentHeader) {
         return ((segmentHeader[FLAGS_BYTE_INDEX] & 0b0010_0000) >> 5) == 1;
     }
 
@@ -69,19 +71,6 @@ public class TcpProtocolUtils {
         }
 
         return ackNumber;
-    }
-
-    public static void writePayloadLength(byte[] segmentHeader, int payloadLength) {
-        segmentHeader[FLAGS_BYTE_INDEX]     |= (payloadLength >> 8) & 0x1F;
-        segmentHeader[FLAGS_BYTE_INDEX + 1] |= payloadLength & 0xFF;
-    }
-
-    public static int readPayloadLength(final byte[] segmentHeader) {
-        int payloadLength = 0;
-        payloadLength |= (segmentHeader[5] & 0x1F) << 8;
-        payloadLength |= segmentHeader[6];
-
-        return payloadLength;
     }
 
 }
