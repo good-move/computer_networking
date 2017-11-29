@@ -2,7 +2,7 @@ package ru.nsu.ccfit.boltava.socket;
 
 
 /**
- * Protocol packet structure:
+ * Protocol segment structure:
  *
  * 0-------------31|---------------------63|
  * ========================================
@@ -21,24 +21,24 @@ public class TcpProtocolUtils {
         segmentHeader[FLAGS_BYTE_INDEX] |= 0b1000_0000;
     }
 
-    public static int getSynFlag(byte[] segmentHeader) {
-        return (segmentHeader[FLAGS_BYTE_INDEX] & 0b1000_0000) >> 7;
+    public static boolean getSynFlag(byte[] segmentHeader) {
+        return ((segmentHeader[FLAGS_BYTE_INDEX] & 0b1000_0000) >> 7) == 1;
     }
 
     public static void setAckFlag(byte[] segmentHeader) {
         segmentHeader[FLAGS_BYTE_INDEX] |= 0b0100_0000;
     }
 
-    public static int getAckFlag(byte[] segmentHeader) {
-        return (segmentHeader[FLAGS_BYTE_INDEX] & 0b0100_0000) >> 6;
+    public static boolean getAckFlag(byte[] segmentHeader) {
+        return ((segmentHeader[FLAGS_BYTE_INDEX] & 0b0100_0000) >> 6) == 1;
     }
 
     public static void setFinFlag(byte[] segmentHeader) {
         segmentHeader[FLAGS_BYTE_INDEX] |= 0b0010_0000;
     }
 
-    public static int getFinFlag(byte[] segmentHeader) {
-        return (segmentHeader[FLAGS_BYTE_INDEX] & 0b0010_0000) >> 5;
+    public static boolean getFinFlag(byte[] segmentHeader) {
+        return ((segmentHeader[FLAGS_BYTE_INDEX] & 0b0010_0000) >> 5) == 1;
     }
 
     public static void writeSequenceNumber(byte[] segmentHeader, int seqNumber) {
