@@ -16,6 +16,16 @@ public class TouSegment {
     private SegmentType type;
     private byte[] payload = new byte[0];
 
+    public TouSegment(InetSocketAddress address) {
+        this.address = address;
+    }
+
+    public TouSegment(InetSocketAddress address, int sequenceNumber, int ackNumber) {
+        this.address = address;
+        this.sequenceNumber = sequenceNumber;
+        this.acknowledgementNumber = ackNumber;
+    }
+
     public TouSegment(InetSocketAddress address, byte[] segmentContent, int length) {
         this.address = address;
         parseSegmentContent(segmentContent, length);
@@ -57,10 +67,10 @@ public class TouSegment {
             TouProtocolUtils.setAckFlag(segment);
         }
         if (finFlag) {
-            TouProtocolUtils.hasFinFlag(segment);
+            TouProtocolUtils.setFinFlag(segment);
         }
         if (synFlag) {
-            TouProtocolUtils.hasFinFlag(segment);
+            TouProtocolUtils.setSynFlag(segment);
         }
         // write payload into segment
         System.arraycopy(payload, 0, segment, TouProtocolUtils.SEGMENT_HEADER_LENGTH, payload.length);

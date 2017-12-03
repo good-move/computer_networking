@@ -6,14 +6,16 @@ import java.net.InetSocketAddress;
 
 public class TouSynAckSegment extends TouSegment {
 
-    private static byte[] header = new byte[TouProtocolUtils.SEGMENT_HEADER_LENGTH];
-    static {
-        TouProtocolUtils.setSynFlag(header);
-        TouProtocolUtils.setAckFlag(header);
+    public TouSynAckSegment(InetSocketAddress address) {
+        super(address);
+        this.changeAckFlag(true);
+        this.changeSynFlag(true);
     }
 
-    public TouSynAckSegment(InetSocketAddress address) {
-        super(address, header, header.length);
+    public TouSynAckSegment(InetSocketAddress address, int sequenceNumber, int ackNumber) {
+        super(address, sequenceNumber, ackNumber);
+        this.changeSynFlag(true);
+        this.changeAckFlag(true);
     }
 
 }
