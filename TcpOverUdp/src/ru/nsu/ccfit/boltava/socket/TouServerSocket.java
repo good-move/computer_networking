@@ -4,10 +4,7 @@ import ru.nsu.ccfit.boltava.socket.segment.TouSegment;
 import ru.nsu.ccfit.boltava.socket.segment.TouSynAckSegment;
 
 import java.io.IOException;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.SocketException;
+import java.net.*;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.concurrent.BlockingQueue;
@@ -30,12 +27,12 @@ public class TouServerSocket implements AutoCloseable {
 
     public TouServerSocket() {}
 
-    public TouServerSocket(int port) throws SocketException {
+    public TouServerSocket(int port) throws SocketException, UnknownHostException {
         bind(port);
         listen();
     }
 
-    public void bind(int port) throws SocketException {
+    public void bind(int port) throws SocketException, UnknownHostException {
         socket = new DatagramSocket(port);
         socket.setReuseAddress(true);
     }
@@ -100,17 +97,21 @@ public class TouServerSocket implements AutoCloseable {
 
         @Override
         public void onAckReceived(TouSegment segment) {
+            System.out.println("ServerSocket received ACK");
+            sender.updateSequenceNumber(receiver.getAckNumber());
             synchronized (lock) {
                 if (pendingConnections.contains(segment.getAddress())) {
                     pendingConnections.remove(segment.getAddress());
                     acceptedConnections.add(segment.getAddress());
-                    sender.updateAckNumber((int) receiver.getAckNumber());
+                    sender.updateSequenceNumber((int) receiver.getAckNumber());
                 }
             }
         }
 
         @Override
         public void onSynReceived(TouSegment segment) {
+            System.out.println("ServerSocket received SYN");
+            sender.updateAckNumber(receiver.getAckNumber());
             synchronized (lock) {
                 try {
                     if (!pendingConnections.contains(segment.getAddress())) {
