@@ -20,7 +20,8 @@ public class TouSocket {
     private boolean isBound = false;
     private boolean isConnected = false;
 
-    private long ackNumber = 0;
+    private int sequenceNumber = 0;
+    private int ackNumber = 0;
     private TouProtocolUtils.SocketState state;
     private TouSender sender;
     private TouReceiver receiver;
@@ -34,7 +35,8 @@ public class TouSocket {
     public TouSocket() {}
 
     public TouSocket(InetAddress address, int port) throws IOException {
-        bind(new InetSocketAddress(address, port));
+        localSocket = new DatagramSocket();
+        isBound = true;
         connect(new InetSocketAddress(address, port));
     }
 
@@ -46,6 +48,7 @@ public class TouSocket {
         localSocket = serverSocket.getSocket();
         sender = new TouSender(localSocket);
         receiver = new TouReceiver(localSocket, handler);
+        start();
         state = TouProtocolUtils.SocketState.ESTABLISHED;
     }
 
@@ -63,15 +66,19 @@ public class TouSocket {
         this.port = ((InetSocketAddress) address).getPort();
         sender = new TouSender(localSocket);
         receiver = new TouReceiver(localSocket, handler);
-
-        sender.sendSegment(new TouSynSegment(new InetSocketAddress(this.address, port)));
+        start();
+        sender.sendSegment(
+            new TouSynSegment(new InetSocketAddress(this.address, port), sequenceNumber, ackNumber)
+        );
         state = TouProtocolUtils.SocketState.SYN_SENT;
     }
 
     public void close() throws IOException {
         if (!isConnected) throw new RuntimeException("Socket is not connected");
         if (state == TouProtocolUtils.SocketState.CLOSED) return;
-        sender.sendSegment(new TouFinSegment(new InetSocketAddress(this.address, port)));
+        sender.sendSegment(
+            new TouFinSegment(new InetSocketAddress(this.address, port), sequenceNumber, ackNumber)
+        );
 
     }
 
@@ -104,14 +111,23 @@ public class TouSocket {
     }
 
 
+    private void start() {
+        sender.start();
+        receiver.start();
+    }
+
     private class SegmentsHandler implements ISegmentsHandler {
+
         public void onAckReceived(TouSegment segment) {
+            sender.updateSequenceNumber(segment.getSequenceNumber());
+            sender.updateAckNumber(receiver.getAckNumber());
             switch (state) {
                 case ESTABLISHED:
-                    sender.updateAckNumber((int)receiver.getAckNumber());
+                    break;
                 case CLOSING:
                     serverSocket.removeClient(new InetSocketAddress(address, port));
                     state = TouProtocolUtils.SocketState.CLOSED;
+                    break;
             }
         }
 
@@ -120,6 +136,7 @@ public class TouSocket {
         }
 
         public void onFinReceived(TouSegment segment) {
+            sender.updateSequenceNumber(receiver.getAckNumber());
             try {
                 sender.sendSegment(new TouAckSegment(new InetSocketAddress(address, port)));
             } catch (IOException e) {
@@ -129,9 +146,12 @@ public class TouSocket {
         }
 
         public void onSynAckReceived(TouSegment segment) {
+            sender.updateSequenceNumber(segment.getAcknowledgementNumber());
+            sender.updateAckNumber(receiver.getAckNumber());
             if (state == TouProtocolUtils.SocketState.SYN_SENT) {
                 isConnected = true;
                 state = TouProtocolUtils.SocketState.ESTABLISHED;
+                System.out.println("connection ESTABLISHED");
                 try {
                     sender.sendSegment(new TouAckSegment(new InetSocketAddress(address, port)));
                 } catch (IOException e) {
