@@ -44,10 +44,11 @@ class TouReceiver extends Thread {
                     handleSegment(segment);
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                System.err.println("Receiver interrupted");
+//                e.printStackTrace();
             }
-
         }
+        System.err.println("Receiver stopped");
     }
 
     public int readByte() throws InterruptedException {
@@ -67,8 +68,12 @@ class TouReceiver extends Thread {
         return byteToReturn;
     }
 
-    public long getAckNumber() {
+    long getAckNumber() {
         return totalBytesReceived;
+    }
+
+    void shutdown() {
+        this.interrupt();
     }
 
     private void handleSegment(TouSegment segment) {

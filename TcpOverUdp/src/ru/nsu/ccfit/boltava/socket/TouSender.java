@@ -56,10 +56,12 @@ class TouSender extends Thread {
                 System.err.println("Failed to send segments");
                 e.printStackTrace();
             } catch(InterruptedException e) {
-                e.printStackTrace();
+                System.err.println("Sender interrupted");
+//                e.printStackTrace();
+                this.interrupt();
             }
         }
-
+        System.err.println("Sender stopped");
     }
 
     public void sendSegment(TouSegment segment) throws IOException {
