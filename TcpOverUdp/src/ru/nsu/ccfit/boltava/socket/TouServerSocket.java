@@ -11,7 +11,7 @@ import java.util.HashSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 
-public class TouServerSocket {
+public class TouServerSocket implements AutoCloseable {
 
     private BlockingQueue<InetSocketAddress> acceptedConnections = new LinkedBlockingDeque<>();
     private HashSet<InetSocketAddress> pendingConnections = new HashSet<>();
@@ -21,6 +21,7 @@ public class TouServerSocket {
     private TouReceiver receiver;
     private TouSender sender;
 
+    private boolean is = false;
     private boolean isListening = false;
 
     private final Object lock = new Object();
@@ -38,6 +39,9 @@ public class TouServerSocket {
 
     public void listen() {
         if (isListening) throw new IllegalStateException("Already in the listening state");
+        if (state == TouProtocolUtils.SocketState.CLOSED)
+            throw new IllegalStateException("Socket is closed");
+
         isListening = true;
 
         sender = new TouSender(socket);
@@ -47,6 +51,7 @@ public class TouServerSocket {
     }
 
     public void close() {
+        if (!isListening) throw new IllegalStateException("Socket is not listening");
         if (state == TouProtocolUtils.SocketState.CLOSED) return;
         sender.interrupt();
         receiver.interrupt();
