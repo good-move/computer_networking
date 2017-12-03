@@ -139,4 +139,11 @@ public class TouSegment {
         return sequenceNumber;
     }
 
+    @Override
+    public String toString() {
+        return "TouSegment{" +
+                "sequenceNumber=" + sequenceNumber + ", " +
+                "ackNumber=" + acknowledgementNumber +
+                '}';
+    }
 }
