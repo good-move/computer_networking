@@ -28,13 +28,25 @@ public class TouSocket {
 
     private final Object lock = new Object();
 
+    private Origin origin = Origin.CLIENT;
+    private TouServerSocket serverSocket = null;
 
     public TouSocket() {}
 
     public TouSocket(InetAddress address, int port) throws IOException {
-        this.localSocket = new DatagramSocket();
-        isBound = true;
-        this.connect(new InetSocketAddress(address, port));
+        bind(new InetSocketAddress(address, port));
+        connect(new InetSocketAddress(address, port));
+    }
+
+    TouSocket(TouServerSocket serverSocket, InetAddress address, int port) {
+        this.origin = Origin.SERVER;
+
+        this.address = address;
+        this.port = port;
+        localSocket = serverSocket.getSocket();
+        sender = new TouSender(localSocket);
+        receiver = new TouReceiver(localSocket, handler);
+        state = TouProtocolUtils.SocketState.ESTABLISHED;
     }
 
     public void bind(SocketAddress bindPoint) throws IOException {
@@ -60,6 +72,7 @@ public class TouSocket {
         if (!isConnected) throw new RuntimeException("Socket is not connected");
         if (state == TouProtocolUtils.SocketState.CLOSED) return;
         sender.sendSegment(new TouFinSegment(new InetSocketAddress(this.address, port)));
+
     }
 
     public SocketAddress getRemoteSocketAddress() {
@@ -97,6 +110,7 @@ public class TouSocket {
                 case ESTABLISHED:
                     sender.updateAckNumber((int)receiver.getAckNumber());
                 case CLOSING:
+                    serverSocket.removeClient(new InetSocketAddress(address, port));
                     state = TouProtocolUtils.SocketState.CLOSED;
             }
         }
@@ -125,6 +139,11 @@ public class TouSocket {
                 }
             }
         }
+    }
+
+    private enum Origin {
+        CLIENT,
+        SERVER
     }
 
 }
