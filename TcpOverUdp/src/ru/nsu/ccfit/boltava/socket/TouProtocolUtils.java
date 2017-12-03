@@ -13,9 +13,11 @@ package ru.nsu.ccfit.boltava.socket;
  * 64|65|66|67----69|70--------------------|
  *
  */
-public class TouProtocolUtils {
+class TouProtocolUtils {
 
-    public static int SEGMENT_HEADER_LENGTH = 9;
+    public static final int SEGMENT_HEADER_LENGTH = 9;
+    // Max segment size. Segment is a piece of data from data buffer
+    public static final int MAX_SEGMENT_BODY_LENGTH = 4 * 1000;
 
     private static final int FLAGS_BYTE_INDEX = 8;
 

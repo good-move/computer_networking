@@ -6,15 +6,14 @@ import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Queue;
-import java.util.Random;
 import java.util.concurrent.ArrayBlockingQueue;
 
-public class TouSender implements Runnable {
+import static ru.nsu.ccfit.boltava.socket.TouProtocolUtils.MAX_SEGMENT_BODY_LENGTH;
+
+class TouSender implements Runnable {
 
     // Size of the buffer, used to store data to be sent
     private static final int BUFFER_SIZE = 64 * 1000;
-    // Max segment size. Segment is a piece of data from data buffer
-    private static final int MAX_SEGMENT_SIZE = 4 * 1000;
     // Max size of the queue of pending TOU segments
     private static final int MAX_QUEUE_SIZE = 20;
     // milliseconds to wait after first byte has arrived into buffer
@@ -105,11 +104,12 @@ public class TouSender implements Runnable {
             int offset = 0;
 
             while (offset < bufferToSlice.length) {
-                byte[] payload = new byte[Math.min(bufferToSlice.length - offset, MAX_SEGMENT_SIZE)];
+                byte[] payload = new byte[Math.min(bufferToSlice.length - offset, MAX_SEGMENT_BODY_LENGTH)];
                 this.buffer.get(payload, offset, payload.length);
                 TouSegment segment = new TouSegment(
+                        new InetSocketAddress(socket.getInetAddress(), socket.getPort()),
                         payload,
-                        new InetSocketAddress(socket.getInetAddress(), socket.getPort())
+                        payload.length
                 );
                 segment.setSequenceNumber(curSequenceNumber);
                 segment.setAckNumber(ackNumber);

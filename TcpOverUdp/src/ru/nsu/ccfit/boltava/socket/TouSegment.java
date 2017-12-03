@@ -14,9 +14,9 @@ public class TouSegment {
     private SegmentType type;
     private byte[] payload = new byte[0];
 
-    public TouSegment(byte[] segmentContent, InetSocketAddress address) {
+    public TouSegment(InetSocketAddress address, byte[] segmentContent, int length) {
         this.address = address;
-        parseSegmentContent(segmentContent);
+        parseSegmentContent(segmentContent, length);
     }
 
     public int getSequenceNumber() {
@@ -65,10 +65,10 @@ public class TouSegment {
         return  segment;
     }
 
-    private void parseSegmentContent(byte[] content) {
+    private void parseSegmentContent(byte[] content, int length) {
         sequenceNumber = TouProtocolUtils.readSequenceNumber(content);
         acknowledgementNumber = TouProtocolUtils.readAckNumber(content);
-        payload = new byte[content.length - TouProtocolUtils.SEGMENT_HEADER_LENGTH];
+        payload = new byte[length - TouProtocolUtils.SEGMENT_HEADER_LENGTH];
         synFlag = TouProtocolUtils.hasSynFlag(content);
         finFlag = TouProtocolUtils.hasFinFlag(content);
         ackFlag = TouProtocolUtils.hasAckFlag(content);
