@@ -5,8 +5,10 @@ import ru.nsu.ccfit.boltava.socket.segment.TouSynAckSegment;
 
 import java.io.IOException;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -14,6 +16,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 public class TouServerSocket implements AutoCloseable {
 
     private BlockingQueue<InetSocketAddress> acceptedConnections = new LinkedBlockingDeque<>();
+    private HashMap<InetSocketAddress, TouSocket> clients = new HashMap<>();
     private HashSet<InetSocketAddress> pendingConnections = new HashSet<>();
 
     private TouProtocolUtils.SocketState state;
@@ -21,7 +24,6 @@ public class TouServerSocket implements AutoCloseable {
     private TouReceiver receiver;
     private TouSender sender;
 
-    private boolean is = false;
     private boolean isListening = false;
 
     private final Object lock = new Object();
@@ -35,6 +37,7 @@ public class TouServerSocket implements AutoCloseable {
 
     public void bind(int port) throws SocketException {
         socket = new DatagramSocket(port);
+        socket.setReuseAddress(true);
     }
 
     public void listen() {
@@ -70,10 +73,27 @@ public class TouServerSocket implements AutoCloseable {
             address = acceptedConnections.take();
         } catch (InterruptedException e) {
             e.printStackTrace();
-            throw new RuntimeException("Interrupted waiting for incoming connections");
+            throw new RuntimeException("Interrupted while waiting for incoming connections");
         }
 
-        return new TouSocket(address.getAddress(), address.getPort());
+        TouSocket client = new TouSocket(this, address.getAddress(), address.getPort());
+        clients.put(address, client);
+        return client;
+    }
+
+    public int getLocalPort() {
+        return socket.getPort();
+    }
+    public InetAddress getInetAddress() {
+        return socket.getInetAddress();
+    }
+
+    DatagramSocket getSocket() {
+        return socket;
+    }
+
+    void removeClient(InetSocketAddress address) {
+        clients.remove(address);
     }
 
     private class SegmentsHandler implements ISegmentsHandler {
