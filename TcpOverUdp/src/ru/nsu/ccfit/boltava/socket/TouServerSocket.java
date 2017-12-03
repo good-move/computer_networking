@@ -21,7 +21,11 @@ public class TouServerSocket {
     private TouReceiver receiver;
     private TouSender sender;
 
+    private boolean isListening = false;
+
     private final Object lock = new Object();
+
+    public TouServerSocket() {}
 
     public TouServerSocket(int port) throws SocketException {
         bind(port);
@@ -33,6 +37,9 @@ public class TouServerSocket {
     }
 
     public void listen() {
+        if (isListening) throw new IllegalStateException("Already in the listening state");
+        isListening = true;
+
         sender = new TouSender(address);
         receiver = new TouReceiver(address, new SegmentsHandler());
         sender.start();
@@ -53,6 +60,7 @@ public class TouServerSocket {
 
         InetSocketAddress address;
         try {
+            //    TODO: make waiting threads wake up when this.close() is invoked
             address = acceptedConnections.take();
         } catch (InterruptedException e) {
             e.printStackTrace();
