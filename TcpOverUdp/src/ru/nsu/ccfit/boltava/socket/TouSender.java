@@ -25,31 +25,38 @@ class TouSender extends Thread {
     private final Queue<TouSegment> pendingSegments = new ArrayBlockingQueue<>(MAX_QUEUE_SIZE);
 
     private DatagramSocket socket;
-    private long sequenceNumber = 0L;
-    private int ackNumber;
+    private int sequenceNumber = 0;
+    private int ackNumber = 0;
 
     private final Object lock = new Object();
 
     TouSender(DatagramSocket socket) {
+        super("Sender");
         this.socket = socket;
     }
 
     @Override
     public void run() {
+        final String threadName = Thread.currentThread().getName();
+        System.out.println(threadName + " has started");
         while (!Thread.interrupted()) {
             try {
+                System.out.println(threadName + " Trying");
                 if (!pendingSegments.isEmpty()) {
+                    System.out.println("Sending segments");
                     sendSegments();
                 } else {
                     synchronized (lock) {
-                        while (buffer.position() == 0) {
+                        System.out.println(threadName + " Here");
+                        while (buffer.position() == 0 && pendingSegments.isEmpty()) {
                             lock.wait();
                         }
                         // wait until sufficient number of bytes
                         // is added to buffer before slicing it
+                        System.out.println(threadName + " Here 1");
                         lock.wait(WAIT_TIMEOUT);
                         sliceBuffer();
-                        notifyAll();
+                        lock.notifyAll();
                     }
                 }
             } catch (IOException e) {
@@ -66,14 +73,21 @@ class TouSender extends Thread {
 
     public void sendSegment(TouSegment segment) throws IOException {
         synchronized (lock) {
+            segment.setAckNumber(ackNumber);
+            segment.setSequenceNumber(sequenceNumber);
             byte[] payload = segment.toBytes();
             socket.send(new DatagramPacket(payload, payload.length, segment.getAddress()));
             lock.notifyAll();
+            System.out.println("Sent segment");
         }
     }
 
     public void appendSegment(TouSegment segment) {
-        pendingSegments.add(segment);
+        synchronized (lock) {
+            pendingSegments.add(segment);
+            System.out.println("Appended segment");
+            lock.notifyAll();
+        }
     }
 
     public void appendByte(byte payload) throws InterruptedException {
@@ -88,12 +102,19 @@ class TouSender extends Thread {
 
     public void updateAckNumber(int ackNumber) {
         synchronized (lock) {
-            if (ackNumber > this.ackNumber) {
-                this.ackNumber = ackNumber;
-                for (TouSegment segment : pendingSegments) {
-                    if (segment.getSequenceNumber() <= ackNumber) {
-                        pendingSegments.remove(segment);
-                    }
+            System.out.println("Updating ACK number");
+            this.ackNumber = ackNumber;
+        }
+    }
+
+    public void updateSequenceNumber(int seqNumber) {
+        synchronized (lock) {
+            System.out.println("Updating SEQ number");
+            this.sequenceNumber = seqNumber;
+            for (TouSegment segment : pendingSegments) {
+                if (segment.getSequenceNumber() + segment.getPayload().length <= seqNumber) {
+                    sequenceNumber = segment.getSequenceNumber() + segment.getPayload().length;
+                    pendingSegments.remove(segment);
                 }
             }
         }
@@ -106,7 +127,7 @@ class TouSender extends Thread {
             }
 
             byte[] bufferToSlice = this.buffer.array();
-            int curSequenceNumber = (int)sequenceNumber;
+            int curSequenceNumber = sequenceNumber;
             int offset = 0;
 
             while (offset < bufferToSlice.length) {

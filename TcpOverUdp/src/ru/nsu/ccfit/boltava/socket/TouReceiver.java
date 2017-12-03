@@ -22,25 +22,32 @@ class TouReceiver extends Thread {
     private final Object lock = new Object();
 
     TouReceiver(DatagramSocket socket, ISegmentsHandler handler) {
+        super("Receiver");
         this.socket = socket;
+        this.handler = handler;
     }
 
     @Override
     public void run() {
+        final String THREAD_NAME = Thread.currentThread().getName();
         while (!Thread.interrupted()) {
             try {
                 byte[] segmentBytes = new byte[
                     TouProtocolUtils.SEGMENT_HEADER_LENGTH + TouProtocolUtils.MAX_SEGMENT_BODY_LENGTH
                 ];
                 DatagramPacket packet = new DatagramPacket(segmentBytes, segmentBytes.length);
+                System.out.println(THREAD_NAME + " waiting for segment");
                 socket.receive(packet);
+                System.out.println(THREAD_NAME + " received segment");
                 TouSegment segment = new TouSegment(
                     new InetSocketAddress(packet.getAddress(), packet.getPort()),
                     packet.getData(),
                     packet.getLength()
                 );
+                System.out.println(segment.toString());
                 // ignore packets, which already have been acknowledged
-                if (totalBytesReceived < segment.getSequenceNumber() + segment.getPayload().length) {
+                if (totalBytesReceived <= segment.getSequenceNumber() + segment.getPayload().length) {
+                    System.out.println(THREAD_NAME + " handling segment");
                     handleSegment(segment);
                 }
             } catch (IOException e) {
@@ -68,8 +75,8 @@ class TouReceiver extends Thread {
         return byteToReturn;
     }
 
-    long getAckNumber() {
-        return totalBytesReceived;
+    int getAckNumber() {
+        return (int) totalBytesReceived;
     }
 
     void shutdown() {
@@ -83,6 +90,7 @@ class TouReceiver extends Thread {
                 handler.onSynReceived(segment);
                 break;
             case SYNACK:
+                totalBytesReceived = segment.getSequenceNumber() + 1;
                 handler.onSynAckReceived(segment);
                 break;
             case ACK:
@@ -90,6 +98,7 @@ class TouReceiver extends Thread {
                     tryAppendSegment(segment);
                     return;
                 }
+
                 handler.onAckReceived(segment);
                 break;
             case FIN:
