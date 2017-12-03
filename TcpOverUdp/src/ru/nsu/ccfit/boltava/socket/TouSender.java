@@ -1,5 +1,7 @@
 package ru.nsu.ccfit.boltava.socket;
 
+import ru.nsu.ccfit.boltava.socket.segment.TouSegment;
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -10,7 +12,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 
 import static ru.nsu.ccfit.boltava.socket.TouProtocolUtils.MAX_SEGMENT_BODY_LENGTH;
 
-class TouSender implements Runnable {
+class TouSender extends Thread {
 
     // Size of the buffer, used to store data to be sent
     private static final int BUFFER_SIZE = 64 * 1000;
@@ -82,12 +84,14 @@ class TouSender implements Runnable {
         }
     }
 
-    public void setAckNumber(int ackNumber) {
+    public void updateAckNumber(int ackNumber) {
         synchronized (lock) {
-            this.ackNumber = ackNumber;
-            for (TouSegment segment : pendingSegments) {
-                if (segment.getSequenceNumber() <= ackNumber) {
-                    pendingSegments.remove(segment);
+            if (ackNumber > this.ackNumber) {
+                this.ackNumber = ackNumber;
+                for (TouSegment segment : pendingSegments) {
+                    if (segment.getSequenceNumber() <= ackNumber) {
+                        pendingSegments.remove(segment);
+                    }
                 }
             }
         }
