@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.*;
-import java.util.Random;
 
 
 public class TouSocket {
@@ -28,8 +27,6 @@ public class TouSocket {
         isBound = true;
         this.connect(new InetSocketAddress(address, port));
     }
-
-    public void write(byte data) {}
 
     public void bind(SocketAddress bindPoint) throws IOException {
         if (this.isBound) throw new IOException("Socket is already bound");
