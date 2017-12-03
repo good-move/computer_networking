@@ -13,7 +13,7 @@ package ru.nsu.ccfit.boltava.socket;
  * 64|65|66|67----69|70--------------------|
  *
  */
-class TouProtocolUtils {
+public class TouProtocolUtils {
 
     public static final int SEGMENT_HEADER_LENGTH = 9;
     // Max segment size. Segment is a piece of data from data buffer
@@ -73,6 +73,20 @@ class TouProtocolUtils {
         }
 
         return ackNumber;
+    }
+
+    public enum SocketState {
+        LISTEN,
+        SYN_SENT,
+        SYN_RECEIVED,
+        ESTABLISHED,
+        FIN_WAIT_1,
+        FIN_WAIT_2,
+        CLOSE_WAIT,
+        CLOSING,
+        LAST_ACK,
+        TIME_WAIT,
+        CLOSED,
     }
 
 }
