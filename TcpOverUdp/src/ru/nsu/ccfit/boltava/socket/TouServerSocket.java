@@ -17,7 +17,7 @@ public class TouServerSocket {
     private HashSet<InetSocketAddress> pendingConnections = new HashSet<>();
 
     private TouProtocolUtils.SocketState state;
-    private DatagramSocket address;
+    private DatagramSocket socket;
     private TouReceiver receiver;
     private TouSender sender;
 
@@ -33,15 +33,15 @@ public class TouServerSocket {
     }
 
     public void bind(int port) throws SocketException {
-        address = new DatagramSocket(port);
+        socket = new DatagramSocket(port);
     }
 
     public void listen() {
         if (isListening) throw new IllegalStateException("Already in the listening state");
         isListening = true;
 
-        sender = new TouSender(address);
-        receiver = new TouReceiver(address, new SegmentsHandler());
+        sender = new TouSender(socket);
+        receiver = new TouReceiver(socket, new SegmentsHandler());
         sender.start();
         receiver.start();
     }
@@ -52,6 +52,7 @@ public class TouServerSocket {
         receiver.interrupt();
         pendingConnections.clear();
         acceptedConnections.clear();
+        socket.close();
         state = TouProtocolUtils.SocketState.CLOSED;
     }
 
