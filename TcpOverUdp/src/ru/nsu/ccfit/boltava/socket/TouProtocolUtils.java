@@ -54,7 +54,7 @@ public class TouProtocolUtils {
     public static int readSequenceNumber(final byte[] segmentHeader) {
         int sequenceNumber = 0;
         for (int i = 3; i >= 0; --i) {
-            sequenceNumber |= segmentHeader[i] << (8*i);
+            sequenceNumber |= (segmentHeader[i] << (8*i));
         }
 
         return sequenceNumber;
@@ -69,7 +69,7 @@ public class TouProtocolUtils {
     public static int readAckNumber(final byte[] segmentHeader) {
         int ackNumber = 0;
         for (int i = 3; i >= 0; --i) {
-            ackNumber |= segmentHeader[i+4] << (8*i);
+            ackNumber |= segmentHeader[7-i] << (8*i);
         }
 
         return ackNumber;
